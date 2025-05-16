@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'drf_yasg',
+    'channels',
 
     # Local apps
     'motion_detector_backend.users',
@@ -71,6 +72,14 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'motion_detector_backend.wsgi.application'
+ASGI_APPLICATION = 'motion_detector_backend.asgi.application'
+
+# Channels settings
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 # Database
 DATABASES = {

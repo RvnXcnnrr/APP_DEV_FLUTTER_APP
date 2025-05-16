@@ -1,7 +1,48 @@
 /// Configuration for the application
 class AppConfig {
+  // Set this to the appropriate environment
+  static const Environment currentEnvironment = Environment.emulator;
+
   /// Base URL for the API
-  static const String apiBaseUrl = 'http://10.0.2.2:8000';  // Use 10.0.2.2 for Android emulator to access localhost
-  // static const String apiBaseUrl = 'http://localhost:8000';  // Use for web or iOS simulator
-  // static const String apiBaseUrl = 'http://192.168.1.9:8000';  // Use your actual IP for physical devices
+  static String get apiBaseUrl {
+    switch (currentEnvironment) {
+      case Environment.emulator:
+        return 'http://10.0.2.2:8000';  // Use 10.0.2.2 for Android emulator to access localhost
+      case Environment.web:
+        return 'http://localhost:8000';  // Use for web
+      case Environment.ios:
+        return 'http://localhost:8000';  // Use for iOS simulator
+      case Environment.physical:
+        return 'http://192.168.1.9:8000';  // Use your actual IP for physical devices
+    }
+  }
+
+  /// WebSocket configuration
+  static String get wsBaseUrl {
+    switch (currentEnvironment) {
+      case Environment.emulator:
+        return 'ws://10.0.2.2:8000/ws/sensors/';  // Use 10.0.2.2 for Android emulator
+      case Environment.web:
+        return 'ws://localhost:8000/ws/sensors/';  // Use for web
+      case Environment.ios:
+        return 'ws://localhost:8000/ws/sensors/';  // Use for iOS simulator
+      case Environment.physical:
+        return 'ws://192.168.1.9:8000/ws/sensors/';  // Use your actual IP for physical devices
+    }
+  }
+}
+
+/// Environment types for configuration
+enum Environment {
+  /// Android emulator
+  emulator,
+
+  /// Web browser
+  web,
+
+  /// iOS simulator
+  ios,
+
+  /// Physical device
+  physical,
 }

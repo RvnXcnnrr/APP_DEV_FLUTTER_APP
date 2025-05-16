@@ -5,6 +5,8 @@ import 'package:appdev_md/utils/theme.dart';
 import 'package:appdev_md/utils/config.dart';
 import 'package:appdev_md/utils/logger.dart';
 import 'package:appdev_md/providers/user_provider.dart';
+import 'package:appdev_md/providers/motion_event_provider.dart';
+import 'package:appdev_md/providers/sensor_data_provider.dart';
 import 'package:appdev_md/pages/auth/login_page.dart';
 import 'package:appdev_md/pages/auth/register_page.dart';
 import 'package:appdev_md/pages/auth/forgot_password_page.dart';
@@ -14,16 +16,22 @@ import 'package:appdev_md/pages/profile_page.dart';
 import 'package:appdev_md/pages/settings_page.dart';
 import 'package:appdev_md/services/api_service.dart';
 import 'package:appdev_md/services/auth_service.dart';
+import 'package:appdev_md/services/websocket_service.dart';
 
 // Global services for easy access
 final apiService = ApiService(baseUrl: AppConfig.apiBaseUrl);
 final authService = AuthService(apiService: apiService);
+final webSocketService = WebSocketService(
+  serverUrl: AppConfig.wsBaseUrl,
+);
 
 // Log API configuration for debugging
 void logApiConfig() {
   Logger.info('API Base URL: ${AppConfig.apiBaseUrl}');
+  Logger.info('WebSocket URL: ${AppConfig.wsBaseUrl}');
   Logger.debug('Using API service: $apiService');
   Logger.debug('Using auth service: $authService');
+  Logger.debug('Using WebSocket service: $webSocketService');
 }
 
 void main() async {
@@ -55,9 +63,23 @@ void main() async {
     }
   }
 
+  // Create motion event provider
+  final motionEventProvider = MotionEventProvider(
+    webSocketService: webSocketService,
+  );
+
+  // Create sensor data provider
+  final sensorDataProvider = SensorDataProvider(
+    webSocketService: webSocketService,
+  );
+
   runApp(
-    ChangeNotifierProvider.value(
-      value: userProvider,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: userProvider),
+        ChangeNotifierProvider.value(value: motionEventProvider),
+        ChangeNotifierProvider.value(value: sensorDataProvider),
+      ],
       child: const MyApp(),
     ),
   );
