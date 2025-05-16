@@ -49,6 +49,13 @@ class SensorDataProvider extends ChangeNotifier {
 
   /// Handles sensor data from the WebSocket
   void _handleSensorData(Map<String, dynamic> data) {
+    // Only process data of type 'sensor_data', not 'motion_event'
+    final type = data['type'] as String?;
+    if (type != 'sensor_data') {
+      // Skip processing if this is not a sensor data update
+      return;
+    }
+
     bool dataUpdated = false;
 
     // Update temperature and humidity
@@ -73,7 +80,7 @@ class SensorDataProvider extends ChangeNotifier {
       notifyListeners();
 
       if (kDebugMode) {
-        print('Updated sensor data: Temperature: $_temperature°C, Humidity: $_humidity%');
+        print('Updated real-time sensor data: Temperature: $_temperature°C, Humidity: $_humidity%');
       }
     }
   }

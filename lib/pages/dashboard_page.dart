@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:appdev_md/widgets/motion_event_list.dart';
 import 'package:appdev_md/widgets/app_drawer.dart';
-import 'package:appdev_md/widgets/sensor_data_card.dart';
-import 'package:appdev_md/providers/sensor_data_provider.dart';
 import 'package:appdev_md/providers/motion_event_provider.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -448,8 +446,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Get providers with listen: true to ensure rebuilds when data changes
-    final sensorDataProvider = Provider.of<SensorDataProvider>(context, listen: true);
+    // Get provider with listen: true to ensure rebuilds when data changes
     final motionEventProvider = Provider.of<MotionEventProvider>(context, listen: true);
 
     // Get events for the selected day
@@ -470,13 +467,6 @@ class _DashboardPageState extends State<DashboardPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch, // Ensure widgets stretch horizontally
               children: [
                 const SizedBox(height: 16),
-                // Real-time sensor data card
-                SensorDataCard(
-                  temperature: sensorDataProvider.temperature,
-                  humidity: sensorDataProvider.humidity,
-                  isConnected: sensorDataProvider.isConnected,
-                ),
-                const SizedBox(height: 24),
                 // Calendar
                 _buildCalendar(),
                 const SizedBox(height: 24),

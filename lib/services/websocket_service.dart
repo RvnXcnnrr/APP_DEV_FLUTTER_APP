@@ -116,7 +116,7 @@ class WebSocketService {
           // Create a motion event from the data
           final event = _createMotionEventFromData(data);
 
-          // Add the event to the stream
+          // Add the event to the motion events stream only
           _motionEventsController.add(event);
 
           if (kDebugMode) {
@@ -130,7 +130,7 @@ class WebSocketService {
           }
         }
       } else if (type == 'sensor_data') {
-        // Add the sensor data to the stream
+        // Add the sensor data to the sensor data stream only
         _sensorDataController.add(data);
 
         if (kDebugMode) {
