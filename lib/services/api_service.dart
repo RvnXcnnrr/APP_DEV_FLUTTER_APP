@@ -98,25 +98,57 @@ class ApiService {
   /// Makes a PUT request to the API
   Future<dynamic> put(String endpoint, dynamic data, {bool requiresAuth = true}) async {
     final headers = await _getHeaders(requiresAuth: requiresAuth);
-    final response = await http.put(
-      Uri.parse('$baseUrl/$endpoint'),
-      headers: headers,
-      body: json.encode(data),
-    );
 
-    return _handleResponse(response);
+    // Log request details for debugging
+    Logger.debug('PUT request to: $baseUrl/$endpoint');
+    Logger.debug('Headers: $headers');
+    Logger.debug('Body: ${json.encode(data)}');
+
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/$endpoint'),
+        headers: headers,
+        body: json.encode(data),
+      );
+
+      // Log response status
+      Logger.debug('Response status code: ${response.statusCode}');
+      Logger.debug('Response headers: ${response.headers}');
+
+      return _handleResponse(response);
+    } catch (e) {
+      // Log network errors
+      Logger.error('Network error during PUT request', e);
+      rethrow;
+    }
   }
 
   /// Makes a PATCH request to the API
   Future<dynamic> patch(String endpoint, dynamic data, {bool requiresAuth = true}) async {
     final headers = await _getHeaders(requiresAuth: requiresAuth);
-    final response = await http.patch(
-      Uri.parse('$baseUrl/$endpoint'),
-      headers: headers,
-      body: json.encode(data),
-    );
 
-    return _handleResponse(response);
+    // Log request details for debugging
+    Logger.debug('PATCH request to: $baseUrl/$endpoint');
+    Logger.debug('Headers: $headers');
+    Logger.debug('Body: ${json.encode(data)}');
+
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/$endpoint'),
+        headers: headers,
+        body: json.encode(data),
+      );
+
+      // Log response status
+      Logger.debug('Response status code: ${response.statusCode}');
+      Logger.debug('Response headers: ${response.headers}');
+
+      return _handleResponse(response);
+    } catch (e) {
+      // Log network errors
+      Logger.error('Network error during PATCH request', e);
+      rethrow;
+    }
   }
 
   /// Makes a DELETE request to the API

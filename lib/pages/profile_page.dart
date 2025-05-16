@@ -149,8 +149,9 @@ class _ProfilePageState extends State<ProfilePage> {
                       decoration: const InputDecoration(
                         labelText: 'Email',
                         border: OutlineInputBorder(),
+                        helperText: 'Email cannot be changed',
                       ),
-                      enabled: _isEditing,
+                      enabled: false, // Email field is always disabled
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -258,37 +259,30 @@ class _ProfilePageState extends State<ProfilePage> {
           // Use the global authService from main.dart
           // Import it at the top of the file
 
-          // First update the user profile (name, email, and theme)
+          // First update the user profile (only first name and last name)
+          // Explicitly include username to ensure it's not empty
           final updatedUser = user.copyWith(
             firstName: _firstNameController.text,
             lastName: _lastNameController.text,
-            email: _emailController.text,
+            username: user.email, // Explicitly set username to email
+            // Keep the current email
             // Keep the current theme preference
-            theme: user.theme,
           );
 
-          // Call the API to update the profile
-          await authService.updateProfile(updatedUser);
+          // Call the API to update the profile and get the updated user
+          final updatedUserFromServer = await authService.updateProfile(updatedUser);
 
-          // Update user in provider
-          userProvider.updateUser(
-            firstName: _firstNameController.text,
-            lastName: _lastNameController.text,
-            email: _emailController.text,
-          );
+          // Update user in provider with the response from the server
+          userProvider.setUser(updatedUserFromServer);
 
           // Upload profile picture if selected
           if (_imageFile != null) {
             try {
-              // Upload the profile picture
-              final userWithPicture = await authService.uploadProfilePicture(updatedUser, _imageFile!);
+              // Upload the profile picture and get the updated user
+              final userWithPicture = await authService.uploadProfilePicture(updatedUserFromServer, _imageFile!);
 
-              // Update the user in the provider with the new profile picture URL
-              if (userWithPicture.profileImageUrl != null) {
-                userProvider.updateUser(
-                  profileImageUrl: userWithPicture.profileImageUrl,
-                );
-              }
+              // Update the user in the provider with the response from the server
+              userProvider.setUser(userWithPicture);
             } catch (e) {
               // Show error for profile picture upload
               if (mounted) {
@@ -325,8 +319,14 @@ class _ProfilePageState extends State<ProfilePage> {
   /// Updates the theme preference on the server
   Future<void> _updateThemeOnServer(User user, String theme) async {
     try {
-      // Call the API to update the theme
-      await authService.updateThemePreference(user, theme);
+      // Call the API to update the theme and get the updated user
+      // Don't modify the username or email
+      final updatedUser = await authService.updateThemePreference(user, theme);
+
+      // Update the user in the provider with the response from the server
+      if (mounted) {
+        Provider.of<UserProvider>(context, listen: false).setUser(updatedUser);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

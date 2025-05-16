@@ -59,6 +59,7 @@ class UserProvider extends ChangeNotifier {
         firstName: firstName,
         lastName: lastName,
         email: email,
+        username: _user!.email, // Ensure username is always set to email
         profileImageUrl: profileImageUrl,
         theme: theme,
       );
@@ -80,7 +81,10 @@ class UserProvider extends ChangeNotifier {
     // Update user theme preference if logged in
     if (_user != null) {
       final themeString = _themeService.getThemeString(mode);
-      _user = _user!.copyWith(theme: themeString);
+      _user = _user!.copyWith(
+        theme: themeString,
+        username: _user!.email, // Ensure username is always set to email
+      );
     }
 
     // Save theme preference

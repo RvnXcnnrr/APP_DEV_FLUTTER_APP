@@ -83,12 +83,22 @@ class AuthService {
       // Create user object from response
       final user = User.fromJson(userData);
 
-      Logger.debug('Created user object: $user');
-      Logger.debug('Email verified status: ${user.emailVerified}');
+      // Ensure username is not empty
+      String username = user.username;
+      User userWithValidUsername = user;
+
+      if (username.isEmpty) {
+        username = user.email;
+        Logger.warning('Username is empty after login, using email as username: $username');
+        userWithValidUsername = user.copyWith(username: username);
+      }
+
+      Logger.debug('Created user object: $userWithValidUsername');
+      Logger.debug('Email verified status: ${userWithValidUsername.emailVerified}');
 
       // Check if email is verified
-      if (!user.emailVerified) {
-        Logger.warning('Email not verified for user: ${user.email}');
+      if (!userWithValidUsername.emailVerified) {
+        Logger.warning('Email not verified for user: ${userWithValidUsername.email}');
 
         // Try to get user details to double-check verification status
         try {
@@ -100,7 +110,7 @@ class AuthService {
 
             if (emailVerified) {
               // Update the user object with the correct verification status
-              return user.copyWith(emailVerified: true);
+              return userWithValidUsername.copyWith(emailVerified: true);
             }
           }
         } catch (detailsError) {
@@ -114,10 +124,10 @@ class AuthService {
         );
       }
 
-      Logger.info('Email verified for user: ${user.email}');
+      Logger.info('Email verified for user: ${userWithValidUsername.email}');
 
-      // Return the user
-      return user;
+      // Return the user with valid username
+      return userWithValidUsername;
     } catch (e) {
       // Log error
       Logger.error('Login error', e);
@@ -247,28 +257,40 @@ class AuthService {
   Future<User> updateProfile(User user) async {
     try {
       Logger.info('Updating user profile: ${user.firstName} ${user.lastName}');
-      Logger.debug('User data: ${user.toJson()}');
 
-      // First try the dj-rest-auth endpoint
+      // Create a map with ONLY the fields we want to update
+      // Explicitly exclude username to avoid validation errors
+      final userData = {
+        'first_name': user.firstName,
+        'last_name': user.lastName,
+        'theme_preference': user.theme,
+        // Removed username field completely
+      };
+
+      Logger.debug('User data being sent to backend: $userData');
+
+      // First try the dj-rest-auth endpoint with PATCH (partial update)
       try {
-        final response = await _apiService.put(
+        final response = await _apiService.patch(
           'api/auth/user/',
-          user.toJson(),
+          userData,
         );
 
-        Logger.info('Profile updated successfully');
+        Logger.info('Profile updated successfully with dj-rest-auth endpoint');
+        Logger.debug('Response from server: $response');
         return User.fromJson(response);
       } catch (e) {
-        // If that fails, try the custom endpoint
+        // If that fails, try the custom endpoint with PATCH
         Logger.warning('Failed to update profile with dj-rest-auth endpoint: $e');
         Logger.info('Trying custom endpoint...');
 
-        final response = await _apiService.put(
+        final response = await _apiService.patch(
           'api/users/profile/',
-          user.toJson(),
+          userData,
         );
 
         Logger.info('Profile updated successfully with custom endpoint');
+        Logger.debug('Response from server: $response');
         return User.fromJson(response);
       }
     } catch (e) {
@@ -294,23 +316,40 @@ class AuthService {
     try {
       Logger.info('Updating theme preference to: $theme');
 
-      // Try the custom endpoint first
+      // Try the custom endpoint first with PATCH
       try {
-        final response = await _apiService.put(
+        final response = await _apiService.patch(
           'api/users/profile/theme/',
           {
             'theme_preference': theme,
+            // Removed username field completely
           },
         );
 
         Logger.info('Theme preference updated successfully');
+        Logger.debug('Response from server: $response');
         return User.fromJson(response);
       } catch (e) {
-        // If that fails, try updating the whole profile
+        // If that fails, try updating the whole profile with PATCH
         Logger.warning('Failed to update theme with custom endpoint: $e');
         Logger.info('Trying to update full profile...');
 
-        return await updateProfile(user.copyWith(theme: theme));
+        // Create a map with ONLY the fields we want to update
+        final userData = {
+          'theme_preference': theme,
+          // Removed username field completely
+        };
+
+        Logger.debug('User data being sent to backend: $userData');
+
+        final response = await _apiService.patch(
+          'api/users/profile/',
+          userData,
+        );
+
+        Logger.info('Theme preference updated successfully with full profile update');
+        Logger.debug('Response from server: $response');
+        return User.fromJson(response);
       }
     } catch (e) {
       Logger.error('Error updating theme preference', e);
@@ -326,10 +365,12 @@ class AuthService {
 
       // First try the dj-rest-auth endpoint
       try {
+        // No additional fields needed for profile picture upload
         final response = await _apiService.uploadFile(
           'api/auth/profile-picture/',
           image,
           'image',
+          // No additionalFields - don't include username
         );
 
         Logger.info('Profile picture uploaded successfully');
@@ -339,10 +380,12 @@ class AuthService {
         Logger.warning('Failed to upload profile picture with dj-rest-auth endpoint: $e');
         Logger.info('Trying custom endpoint...');
 
+        // Only include the profile picture field, no username
         final response = await _apiService.uploadFile(
           'api/users/profile/picture/',
           image,
           'profile_picture',
+          // No additionalFields - don't include username
         );
 
         Logger.info('Profile picture uploaded successfully with custom endpoint');

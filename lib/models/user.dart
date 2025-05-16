@@ -12,6 +12,9 @@ class User {
   /// Email address of the user
   final String email;
 
+  /// Username of the user (required by Django)
+  final String username;
+
   /// URL to the user's profile image
   final String? profileImageUrl;
 
@@ -27,6 +30,7 @@ class User {
     required this.firstName,
     required this.lastName,
     required this.email,
+    required this.username,
     this.profileImageUrl,
     this.theme = 'system',
     this.emailVerified = false,
@@ -47,10 +51,13 @@ class User {
 
     // Handle theme preference with different possible field names
     String themePreference = 'system';
-    if (json.containsKey('theme')) {
-      themePreference = json['theme'] ?? 'system';
-    } else if (json.containsKey('theme_preference')) {
+    // First check for theme_preference (Django backend field)
+    if (json.containsKey('theme_preference')) {
       themePreference = json['theme_preference'] ?? 'system';
+    }
+    // Then check for theme (Flutter app field)
+    else if (json.containsKey('theme')) {
+      themePreference = json['theme'] ?? 'system';
     }
 
     // Check for email verification status in different possible fields
@@ -63,11 +70,23 @@ class User {
       isVerified = json['verified'] == true;
     }
 
+    // Get username - default to email if not provided or empty
+    String username = json['username'] ?? '';
+    // If username is empty, use email as fallback
+    if (username.isEmpty) {
+      username = json['email'] ?? '';
+      // If email is also empty (shouldn't happen), use a placeholder
+      if (username.isEmpty) {
+        username = 'user_${DateTime.now().millisecondsSinceEpoch}';
+      }
+    }
+
     return User(
       id: userId,
       firstName: json['first_name'] ?? '',
       lastName: json['last_name'] ?? '',
       email: json['email'] ?? '',
+      username: username,
       profileImageUrl: json['profile_picture'],
       theme: themePreference,
       // Use the actual verification status from the backend
@@ -82,8 +101,9 @@ class User {
       'first_name': firstName,
       'last_name': lastName,
       'email': email,
+      'username': username, // Include username for Django compatibility
       'profile_picture': profileImageUrl,
-      'theme': theme,
+      'theme_preference': theme, // Use theme_preference for backend compatibility
       'email_verified': emailVerified,
     };
   }
@@ -94,6 +114,7 @@ class User {
     String? firstName,
     String? lastName,
     String? email,
+    String? username,
     String? profileImageUrl,
     String? theme,
     bool? emailVerified,
@@ -103,6 +124,7 @@ class User {
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       email: email ?? this.email,
+      username: username ?? this.username,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       theme: theme ?? this.theme,
       emailVerified: emailVerified ?? this.emailVerified,
@@ -115,6 +137,6 @@ class User {
   /// Converts the user to a string
   @override
   String toString() {
-    return 'User{id: $id, firstName: $firstName, lastName: $lastName, email: $email, theme: $theme, emailVerified: $emailVerified}';
+    return 'User{id: $id, firstName: $firstName, lastName: $lastName, email: $email, username: $username, theme: $theme, emailVerified: $emailVerified}';
   }
 }
