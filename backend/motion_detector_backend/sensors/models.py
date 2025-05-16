@@ -9,10 +9,11 @@ class Device(models.Model):
     device_id = models.CharField(max_length=100, unique=True)
     location = models.CharField(max_length=100)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='devices')
+    token = models.CharField(max_length=100, blank=True, null=True, help_text="Authentication token for device access")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     def __str__(self):
         return f"{self.name} ({self.device_id})"
 
@@ -26,10 +27,10 @@ class MotionEvent(models.Model):
     humidity = models.FloatField(null=True, blank=True)
     image = models.ImageField(upload_to='motion_events/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['-timestamp']
-    
+
     def __str__(self):
         return f"Motion detected by {self.device.name} at {self.timestamp}"
 
@@ -42,9 +43,9 @@ class SensorData(models.Model):
     temperature = models.FloatField()
     humidity = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['-timestamp']
-    
+
     def __str__(self):
         return f"Sensor data from {self.device.name} at {self.timestamp}"

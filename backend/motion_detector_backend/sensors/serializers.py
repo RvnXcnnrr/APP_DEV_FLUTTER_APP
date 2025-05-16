@@ -7,8 +7,11 @@ class DeviceSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Device
-        fields = ['id', 'name', 'device_id', 'location', 'is_active', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'device_id', 'location', 'token', 'is_active', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+        extra_kwargs = {
+            'token': {'write_only': True}  # Make token write-only for security
+        }
 
     def create(self, validated_data):
         request = self.context.get('request')
