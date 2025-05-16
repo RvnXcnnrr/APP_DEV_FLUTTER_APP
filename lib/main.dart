@@ -8,6 +8,7 @@ import 'package:appdev_md/providers/user_provider.dart';
 import 'package:appdev_md/pages/auth/login_page.dart';
 import 'package:appdev_md/pages/auth/register_page.dart';
 import 'package:appdev_md/pages/auth/forgot_password_page.dart';
+import 'package:appdev_md/pages/auth/reset_password_confirm_page.dart';
 import 'package:appdev_md/pages/dashboard_page.dart';
 import 'package:appdev_md/pages/profile_page.dart';
 import 'package:appdev_md/pages/settings_page.dart';
@@ -84,6 +85,30 @@ class MyApp extends StatelessWidget {
         '/dashboard': (context) => const DashboardPage(),
         '/profile': (context) => const ProfilePage(),
         '/settings': (context) => const SettingsPage(),
+      },
+      // Handle dynamic routes for password reset
+      onGenerateRoute: (settings) {
+        // Handle reset-password/confirm/:uid/:token route
+        if (settings.name?.startsWith('/reset-password/confirm/') ?? false) {
+          final uri = Uri.parse(settings.name!);
+          final pathSegments = uri.pathSegments;
+
+          // Extract uid and token from URL
+          if (pathSegments.length >= 4) {
+            final uid = pathSegments[2];
+            final token = pathSegments[3];
+
+            return MaterialPageRoute(
+              builder: (context) => ResetPasswordConfirmPage(
+                uid: uid,
+                token: token,
+              ),
+            );
+          }
+        }
+
+        // Return null to let the routes above handle known routes
+        return null;
       },
     );
   }

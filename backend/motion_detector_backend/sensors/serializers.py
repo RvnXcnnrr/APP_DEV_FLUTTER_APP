@@ -9,9 +9,11 @@ class DeviceSerializer(serializers.ModelSerializer):
         model = Device
         fields = ['id', 'name', 'device_id', 'location', 'is_active', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
-    
+
     def create(self, validated_data):
-        validated_data['owner'] = self.context['request'].user
+        request = self.context.get('request')
+        if request is not None:
+            validated_data['owner'] = request.user
         return super().create(validated_data)
 
 class MotionEventSerializer(serializers.ModelSerializer):
@@ -20,10 +22,10 @@ class MotionEventSerializer(serializers.ModelSerializer):
     """
     device_name = serializers.CharField(source='device.name', read_only=True)
     device_location = serializers.CharField(source='device.location', read_only=True)
-    
+
     class Meta:
         model = MotionEvent
-        fields = ['id', 'device', 'device_name', 'device_location', 'timestamp', 
+        fields = ['id', 'device', 'device_name', 'device_location', 'timestamp',
                   'temperature', 'humidity', 'image', 'created_at']
         read_only_fields = ['id', 'created_at']
 
@@ -33,10 +35,10 @@ class SensorDataSerializer(serializers.ModelSerializer):
     """
     device_name = serializers.CharField(source='device.name', read_only=True)
     device_location = serializers.CharField(source='device.location', read_only=True)
-    
+
     class Meta:
         model = SensorData
-        fields = ['id', 'device', 'device_name', 'device_location', 'timestamp', 
+        fields = ['id', 'device', 'device_name', 'device_location', 'timestamp',
                   'temperature', 'humidity', 'created_at']
         read_only_fields = ['id', 'created_at']
 
@@ -45,11 +47,11 @@ class MotionEventCreateSerializer(serializers.ModelSerializer):
     Serializer for creating MotionEvent with device_id instead of device
     """
     device_id = serializers.CharField(write_only=True)
-    
+
     class Meta:
         model = MotionEvent
         fields = ['device_id', 'timestamp', 'temperature', 'humidity', 'image']
-    
+
     def create(self, validated_data):
         device_id = validated_data.pop('device_id')
         try:
@@ -63,11 +65,11 @@ class SensorDataCreateSerializer(serializers.ModelSerializer):
     Serializer for creating SensorData with device_id instead of device
     """
     device_id = serializers.CharField(write_only=True)
-    
+
     class Meta:
         model = SensorData
         fields = ['device_id', 'timestamp', 'temperature', 'humidity']
-    
+
     def create(self, validated_data):
         device_id = validated_data.pop('device_id')
         try:

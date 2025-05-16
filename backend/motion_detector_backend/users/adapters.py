@@ -4,6 +4,9 @@ from allauth.account.utils import user_email, user_field, user_username
 from allauth.utils import build_absolute_uri
 from django.urls import reverse
 from django.contrib.sites.models import Site
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
 
 
 class CustomAccountAdapter(DefaultAccountAdapter):
@@ -123,3 +126,76 @@ class CustomAccountAdapter(DefaultAccountAdapter):
         This method is called after the verification email is sent
         """
         return super().respond_email_verification_sent(request, user)
+
+    def get_password_confirmation_url(self, request, user, token):
+        """
+        Constructs the password reset confirmation URL
+
+        This method is called when sending the password reset email
+        """
+        # Generate the uidb64 for the user
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        # Construct the URL path
+        path = reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
+
+        # Get the site domain from settings
+        site = Site.objects.get_current()
+
+        # Update site domain if it doesn't match settings
+        if hasattr(settings, 'SITE_DOMAIN') and site.domain != settings.SITE_DOMAIN:
+            site.domain = settings.SITE_DOMAIN
+            site.save()
+            print(f"Updated site domain to {site.domain} for password reset")
+
+        # Use 127.0.0.1 instead of localhost for better compatibility
+        site_domain = site.domain
+        if site_domain == 'localhost:8000':
+            site_domain = '127.0.0.1:8000'
+
+        # Make sure the site domain doesn't have trailing slashes
+        site_domain = site_domain.rstrip('/')
+
+        # Ensure the URL starts with a slash
+        if not path.startswith('/'):
+            path = f"/{path}"
+
+        protocol = 'https' if request and request.is_secure() else 'http'
+        url = f"{protocol}://{site_domain}{path}"
+
+        print(f"Generated password reset URL: {url}")
+        return url
+
+    def reset_password(self, request, user, token):
+        """
+        Overrides the default password reset URL generation
+
+        This method is called by dj-rest-auth when sending password reset emails
+        """
+        # Get the password reset URL using our custom method
+        password_reset_url = self.get_password_confirmation_url(request, user, token)
+
+        # Return the URL
+        return password_reset_url
+
+    def render_mail(self, template_prefix, email, context):
+        """
+        Override the render_mail method to modify the context for password reset emails
+
+        This ensures the password_reset_url is correctly set in the email template
+        """
+        # Check if this is a password reset email
+        if template_prefix == 'account/email/password_reset_key':
+            # If the user is in the context, generate a password reset URL
+            if 'user' in context:
+                user = context['user']
+                # Generate a token for the user
+                token = default_token_generator.make_token(user)
+                # Get the password reset URL
+                password_reset_url = self.get_password_confirmation_url(None, user, token)
+                # Update the context with the custom URL
+                context['password_reset_url'] = password_reset_url
+                print(f"Set password_reset_url in email context: {password_reset_url}")
+
+        # Call the parent method to render the email
+        return super().render_mail(template_prefix, email, context)

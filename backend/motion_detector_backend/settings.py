@@ -157,6 +157,9 @@ ACCOUNT_ADAPTER = 'motion_detector_backend.users.adapters.CustomAccountAdapter'
 # Set default user to inactive until email is verified
 ACCOUNT_DEFAULT_USER_STATUS = False  # Users are inactive by default
 
+# Protocol settings for URLs in emails
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'
+
 # Email settings
 # For development, use SMTP backend to send real emails
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -170,6 +173,11 @@ DEFAULT_FROM_EMAIL = 'reyfoxconner@gmail.com'
 # For local testing, use console backend to print emails to console
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
+# Frontend URL for password reset and other redirects
+# In development, this should be your Flutter app's URL
+# In production, this should be your deployed frontend URL
+FRONTEND_URL = 'http://127.0.0.1:8000'  # Changed to use the backend URL since Flutter app expects this
+
 # dj-rest-auth settings
 REST_AUTH = {
     'USE_JWT': True,
@@ -177,4 +185,7 @@ REST_AUTH = {
     'JWT_AUTH_REFRESH_COOKIE': 'motion-detector-refresh-token',
     'USER_DETAILS_SERIALIZER': 'motion_detector_backend.users.serializers.CustomUserDetailsSerializer',
     'REGISTER_SERIALIZER': 'motion_detector_backend.users.serializers.CustomRegisterSerializer',
+    # Password reset configuration
+    'PASSWORD_RESET_USE_SITES_DOMAIN': True,
+    'PASSWORD_RESET_CONFIRM_URL': 'password-reset/confirm/{uid}/{token}/',
 }

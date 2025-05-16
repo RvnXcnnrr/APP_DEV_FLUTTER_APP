@@ -16,9 +16,15 @@ class CustomRegisterSerializer(RegisterSerializer):
 
     def get_cleaned_data(self):
         data = super().get_cleaned_data()
+
+        # Safely access validated_data with null check
+        validated_data = getattr(self, 'validated_data', {})
+        first_name = validated_data.get('first_name', '') if validated_data else ''
+        last_name = validated_data.get('last_name', '') if validated_data else ''
+
         data.update({
-            'first_name': self.validated_data.get('first_name', ''),
-            'last_name': self.validated_data.get('last_name', ''),
+            'first_name': first_name,
+            'last_name': last_name,
         })
         return data
 
@@ -36,7 +42,7 @@ class CustomRegisterSerializer(RegisterSerializer):
             raise serializers.ValidationError("Enter a valid email address.")
 
         # Check if email is already in use
-        if app_settings.UNIQUE_EMAIL:
+        if getattr(app_settings, "UNIQUE_EMAIL", False):
             if User.objects.filter(email__iexact=email).exists():
                 # Check if the email is verified
                 if EmailAddress.objects.filter(email__iexact=email, verified=True).exists():

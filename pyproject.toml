@@ -1,0 +1,55 @@
+[tool.pyright]
+include = ["backend"]
+exclude = ["**/node_modules", "**/__pycache__"]
+reportMissingImports = true
+reportMissingTypeStubs = false
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
+reportOptionalCall = false
+reportOptionalMemberAccess = false
+reportOptionalSubscript = false
+reportOptionalIterable = false
+reportOptionalContextManager = false
+reportOptionalOperand = false
+
+[tool.pylint.messages_control]
+disable = [
+    "missing-docstring",
+    "invalid-name",
+    "trailing-whitespace",
+    "bad-continuation",
+    "len-as-condition",
+    "fixme",
+    "protected-access",
+    "broad-except",
+    "redefined-outer-name",
+    "redefined-builtin",
+    "bare-except",
+    "unused-argument",
+    "global-statement",
+    "unused-wildcard-import",
+    "wildcard-import",
+    "dangerous-default-value",
+    "arguments-differ",
+    "attribute-defined-outside-init",
+    "abstract-method",
+    "unnecessary-pass",
+    "no-self-use",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-locals",
+    "too-many-statements",
+    "too-many-instance-attributes",
+    "too-many-public-methods",
+    "too-many-branches",
+    "duplicate-code",
+    "no-member",
+    "no-name-in-module",
+    "import-error",
+    "unsubscriptable-object",
+    "unsupported-membership-test",
+    "not-callable"
+]
+
+[tool.pylint.typecheck]
+ignored-modules = ["django.urls.conf"]

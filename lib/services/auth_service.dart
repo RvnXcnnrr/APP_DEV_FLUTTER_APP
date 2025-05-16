@@ -192,15 +192,44 @@ class AuthService {
   /// Sends a password reset email
   Future<void> forgotPassword(String email) async {
     try {
+      Logger.info('Sending password reset email to: $email');
+      Logger.debug('Using correct dj-rest-auth password reset endpoint');
+
       await _apiService.post(
-        'api/auth/forgot-password/',
+        'api/auth/password/reset/',
         {
           'email': email,
         },
         requiresAuth: false,
       );
+
+      Logger.info('Password reset email sent successfully');
     } catch (e) {
+      Logger.error('Error sending password reset email', e);
       // Rethrow the error so it can be handled by the caller
+      rethrow;
+    }
+  }
+
+  /// Confirms password reset with new password
+  Future<void> confirmPasswordReset(String uid, String token, String password1, String password2) async {
+    try {
+      Logger.info('Confirming password reset');
+
+      await _apiService.post(
+        'api/auth/password/reset/confirm/',
+        {
+          'uid': uid,
+          'token': token,
+          'new_password1': password1,
+          'new_password2': password2,
+        },
+        requiresAuth: false,
+      );
+
+      Logger.info('Password reset confirmed successfully');
+    } catch (e) {
+      Logger.error('Error confirming password reset', e);
       rethrow;
     }
   }
