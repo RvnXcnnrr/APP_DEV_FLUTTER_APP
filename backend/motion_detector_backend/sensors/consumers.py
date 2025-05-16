@@ -36,11 +36,19 @@ class SensorConsumer(AsyncWebsocketConsumer):
                 token = Token.objects.get(key=token_key)
                 return token.user
             except Token.DoesNotExist:
-                # If it's the hardcoded device token, allow it
+                # Check if it's a device token
+                try:
+                    device = Device.objects.get(token=token_key)
+                    if device.is_active:
+                        return device.owner
+                except Device.DoesNotExist:
+                    pass
+
+                # If it's the hardcoded device token for ESP32_001, only allow the specific owner
                 if token_key == 'd6d5f5d99bbd616cce3452ad1d02cd6ae968b20d':
-                    # Get the first superuser or any user if no superuser exists
                     try:
-                        return User.objects.filter(is_superuser=True).first() or User.objects.first()
+                        # Only allow oracle.tech.143@gmail.com to use this token
+                        return User.objects.get(email='oracle.tech.143@gmail.com')
                     except User.DoesNotExist:
                         return AnonymousUser()
                 return AnonymousUser()
@@ -121,24 +129,56 @@ class SensorConsumer(AsyncWebsocketConsumer):
         Get a device by its ID, or create it if it doesn't exist
         """
         try:
-            # Try to get the device
-            try:
-                device = Device.objects.get(device_id=device_id)
-                # If the device exists but doesn't belong to the user and the user is authenticated,
-                # update the owner to the current user
-                if device.owner != self.user and not self.user.is_anonymous:
-                    device.owner = self.user
-                    device.save()
-                return device
-            except Device.DoesNotExist:
-                # Create a new device if it doesn't exist
-                device = Device.objects.create(
-                    device_id=device_id,
-                    name=f"ESP32 Device {device_id}",
-                    location="Unknown",
-                    owner=self.user
-                )
-                return device
+            # For ESP32_001, enforce specific owner access control
+            if device_id == 'ESP32_001':
+                try:
+                    # Get the device
+                    device = Device.objects.get(device_id=device_id)
+
+                    # Check if the user is the correct owner (oracle.tech.143@gmail.com)
+                    if self.user.email != 'oracle.tech.143@gmail.com':
+                        print(f"Access denied: User {self.user.email} is not authorized to access device {device_id}")
+                        return None
+
+                    # Set the token if it's not already set
+                    if not device.token:
+                        device.token = 'd6d5f5d99bbd616cce3452ad1d02cd6ae968b20d'
+                        device.save(update_fields=['token'])
+
+                    return device
+                except Device.DoesNotExist:
+                    # Only create the device if the user is oracle.tech.143@gmail.com
+                    if self.user.email == 'oracle.tech.143@gmail.com':
+                        device = Device.objects.create(
+                            device_id=device_id,
+                            name=f"ESP32 Device {device_id}",
+                            location="Living Room",
+                            owner=self.user,
+                            token='d6d5f5d99bbd616cce3452ad1d02cd6ae968b20d'
+                        )
+                        return device
+                    else:
+                        print(f"Access denied: User {self.user.email} is not authorized to create device {device_id}")
+                        return None
+            else:
+                # For other devices, use the standard logic
+                try:
+                    device = Device.objects.get(device_id=device_id)
+                    # If the device exists but doesn't belong to the user and the user is authenticated,
+                    # update the owner to the current user
+                    if device.owner != self.user and not self.user.is_anonymous:
+                        device.owner = self.user
+                        device.save()
+                    return device
+                except Device.DoesNotExist:
+                    # Create a new device if it doesn't exist
+                    device = Device.objects.create(
+                        device_id=device_id,
+                        name=f"ESP32 Device {device_id}",
+                        location="Unknown",
+                        owner=self.user
+                    )
+                    return device
         except Exception as e:
             print(f"Error getting or creating device: {e}")
             return None
