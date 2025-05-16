@@ -370,7 +370,7 @@ class AuthService {
           'api/auth/profile-picture/',
           image,
           'image',
-          // No additionalFields - don't include username
+          // Use POST for dj-rest-auth endpoint (default)
         );
 
         Logger.info('Profile picture uploaded successfully');
@@ -380,12 +380,12 @@ class AuthService {
         Logger.warning('Failed to upload profile picture with dj-rest-auth endpoint: $e');
         Logger.info('Trying custom endpoint...');
 
-        // Only include the profile picture field, no username
+        // For the custom endpoint, use PUT method since it's an UpdateAPIView
         final response = await _apiService.uploadFile(
           'api/users/profile/picture/',
           image,
           'profile_picture',
-          // No additionalFields - don't include username
+          method: 'PUT', // Use PUT for UpdateAPIView
         );
 
         Logger.info('Profile picture uploaded successfully with custom endpoint');

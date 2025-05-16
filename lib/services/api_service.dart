@@ -163,13 +163,32 @@ class ApiService {
   }
 
   /// Uploads a file to the API
-  Future<dynamic> uploadFile(String endpoint, File file, String fieldName, {Map<String, String>? additionalFields, bool requiresAuth = true}) async {
+  ///
+  /// [method] can be 'POST', 'PUT', or 'PATCH'. Defaults to 'POST'.
+  Future<dynamic> uploadFile(
+    String endpoint,
+    File file,
+    String fieldName,
+    {
+      Map<String, String>? additionalFields,
+      bool requiresAuth = true,
+      String method = 'POST'  // Default to POST, but allow PUT or PATCH
+    }
+  ) async {
     final headers = await _getHeaders(requiresAuth: requiresAuth);
     // Remove content-type header as it will be set by the multipart request
     headers.remove('Content-Type');
 
+    // Log request details for debugging
+    Logger.debug('$method file upload request to: $baseUrl/$endpoint');
+    Logger.debug('Headers: $headers');
+    Logger.debug('File field name: $fieldName, File path: ${file.path}');
+    if (additionalFields != null) {
+      Logger.debug('Additional fields: $additionalFields');
+    }
+
     final request = http.MultipartRequest(
-      'POST',
+      method,  // Use the specified method
       Uri.parse('$baseUrl/$endpoint'),
     );
 
@@ -180,10 +199,20 @@ class ApiService {
       request.fields.addAll(additionalFields);
     }
 
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
-    return _handleResponse(response);
+      // Log response status
+      Logger.debug('Response status code: ${response.statusCode}');
+      Logger.debug('Response headers: ${response.headers}');
+
+      return _handleResponse(response);
+    } catch (e) {
+      // Log network errors
+      Logger.error('Network error during $method file upload', e);
+      rethrow;
+    }
   }
 
   /// Handles the response from the API
