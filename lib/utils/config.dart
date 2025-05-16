@@ -19,15 +19,18 @@ class AppConfig {
 
   /// WebSocket configuration
   static String get wsBaseUrl {
+    // Token for device authentication
+    const token = 'd6d5f5d99bbd616cce3452ad1d02cd6ae968b20d';
+
     switch (currentEnvironment) {
       case Environment.emulator:
-        return 'ws://10.0.2.2:8000/ws/sensors/';  // Use 10.0.2.2 for Android emulator
+        return 'ws://10.0.2.2:8000/ws/sensors/?token=$token';  // Use 10.0.2.2 for Android emulator
       case Environment.web:
-        return 'ws://localhost:8000/ws/sensors/';  // Use for web
+        return 'ws://localhost:8000/ws/sensors/?token=$token';  // Use for web
       case Environment.ios:
-        return 'ws://localhost:8000/ws/sensors/';  // Use for iOS simulator
+        return 'ws://localhost:8000/ws/sensors/?token=$token';  // Use for iOS simulator
       case Environment.physical:
-        return 'ws://192.168.1.9:8000/ws/sensors/';  // Use your actual IP for physical devices
+        return 'ws://192.168.1.9:8000/ws/sensors/?token=$token';  // Use your actual IP for physical devices
     }
   }
 }

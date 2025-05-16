@@ -8,7 +8,7 @@ from channels.middleware import BaseMiddleware
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth import get_user_model
 from rest_framework.authtoken.models import Token
-from .models import Device
+from motion_detector_backend.sensors.models import Device
 
 User = get_user_model()
 
@@ -44,15 +44,15 @@ class TokenAuthMiddleware(BaseMiddleware):
         # Get the token from the query string
         query_string = scope.get('query_string', b'').decode()
         query_params = parse_qs(query_string)
-        
+
         token_key = query_params.get('token', [None])[0]
-        
+
         if token_key:
             # Get the user from the token
             scope['user'] = await get_user_from_token(token_key)
         else:
             scope['user'] = AnonymousUser()
-        
+
         # Continue processing
         return await super().__call__(scope, receive, send)
 

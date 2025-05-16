@@ -1,27 +1,73 @@
 import json
 import datetime
+import jwt
+from urllib.parse import parse_qs
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils import timezone
 from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth import get_user_model
+from django.conf import settings
+from rest_framework.authtoken.models import Token
+from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from .models import Device, MotionEvent, SensorData
+
+User = get_user_model()
 
 class SensorConsumer(AsyncWebsocketConsumer):
     """
     WebSocket consumer for sensor data
     """
+    @database_sync_to_async
+    def get_user_from_token(self, token_key):
+        """
+        Get a user from a token key.
+        """
+        # First try to get user from JWT token
+        try:
+            # Try to decode JWT token
+            decoded_token = AccessToken(token_key)
+            user_id = decoded_token['user_id']
+            return User.objects.get(id=user_id)
+        except (TokenError, InvalidToken, User.DoesNotExist, KeyError):
+            # If JWT token is invalid, try auth token
+            try:
+                token = Token.objects.get(key=token_key)
+                return token.user
+            except Token.DoesNotExist:
+                # If it's the hardcoded device token, allow it
+                if token_key == 'd6d5f5d99bbd616cce3452ad1d02cd6ae968b20d':
+                    # Get the first superuser or any user if no superuser exists
+                    try:
+                        return User.objects.filter(is_superuser=True).first() or User.objects.first()
+                    except User.DoesNotExist:
+                        return AnonymousUser()
+                return AnonymousUser()
+
     async def connect(self):
         """
         Called when the WebSocket is handshaking as part of initial connection
         """
-        # Check if the user is authenticated
-        if self.scope['user'].is_anonymous:
-            # Close the connection if the user is not authenticated
+        # Get the token from the query string
+        query_string = self.scope.get('query_string', b'').decode()
+        query_params = parse_qs(query_string)
+
+        token_key = query_params.get('token', [None])[0]
+
+        if token_key:
+            # Get the user from the token
+            self.user = await self.get_user_from_token(token_key)
+
+            # If we couldn't authenticate the user and it's not the device token
+            if self.user.is_anonymous and token_key != 'd6d5f5d99bbd616cce3452ad1d02cd6ae968b20d':
+                # Close the connection if authentication failed
+                await self.close(code=4003)  # 4003 is a custom code for authentication failure
+                return
+        else:
+            # Close the connection if no token is provided
             await self.close(code=4003)  # 4003 is a custom code for authentication failure
             return
-
-        # Store the user for later use
-        self.user = self.scope['user']
 
         # Add the client to the sensor_data group
         await self.channel_layer.group_add(
@@ -33,7 +79,7 @@ class SensorConsumer(AsyncWebsocketConsumer):
         await self.accept()
         await self.send(text_data=json.dumps({
             'type': 'connection_established',
-            'message': f'Connected to WebSocket server as {self.user.username}'
+            'message': f'Connected to WebSocket server with token authentication'
         }))
 
     async def disconnect(self, close_code):
@@ -70,20 +116,31 @@ class SensorConsumer(AsyncWebsocketConsumer):
             }))
 
     @database_sync_to_async
-    def get_device(self, device_id):
+    def get_or_create_device(self, device_id):
         """
-        Get a device by its ID, ensuring it belongs to the authenticated user
+        Get a device by its ID, or create it if it doesn't exist
         """
         try:
-            # Only return the device if it belongs to the authenticated user
-            # and the user has the specific token we're looking for
-            if self.user.auth_token.key == 'd6d5f5d99bbd616cce3452ad1d02cd6ae968b20d':
-                return Device.objects.get(device_id=device_id, owner=self.user)
-            return None
-        except Device.DoesNotExist:
-            return None
+            # Try to get the device
+            try:
+                device = Device.objects.get(device_id=device_id)
+                # If the device exists but doesn't belong to the user and the user is authenticated,
+                # update the owner to the current user
+                if device.owner != self.user and not self.user.is_anonymous:
+                    device.owner = self.user
+                    device.save()
+                return device
+            except Device.DoesNotExist:
+                # Create a new device if it doesn't exist
+                device = Device.objects.create(
+                    device_id=device_id,
+                    name=f"ESP32 Device {device_id}",
+                    location="Unknown",
+                    owner=self.user
+                )
+                return device
         except Exception as e:
-            print(f"Error getting device: {e}")
+            print(f"Error getting or creating device: {e}")
             return None
 
     @database_sync_to_async
@@ -126,8 +183,8 @@ class SensorConsumer(AsyncWebsocketConsumer):
         temperature = data.get('temperature')
         humidity = data.get('humidity')
 
-        # Get the device, ensuring it belongs to the authenticated user
-        device = await self.get_device(device_id)
+        # Get or create the device
+        device = await self.get_or_create_device(device_id)
         if not device:
             await self.send(text_data=json.dumps({
                 'type': 'error',
@@ -202,8 +259,8 @@ class SensorConsumer(AsyncWebsocketConsumer):
         temperature = data.get('temperature')
         humidity = data.get('humidity')
 
-        # Get the device, ensuring it belongs to the authenticated user
-        device = await self.get_device(device_id)
+        # Get or create the device
+        device = await self.get_or_create_device(device_id)
         if not device:
             await self.send(text_data=json.dumps({
                 'type': 'error',
