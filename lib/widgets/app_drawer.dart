@@ -1,15 +1,43 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:appdev_md/providers/user_provider.dart';
 import 'package:appdev_md/pages/profile_page.dart';
 import 'package:appdev_md/pages/settings_page.dart';
-
 import 'package:appdev_md/utils/navigation_helper.dart';
+import 'package:appdev_md/services/api_service.dart';
+import 'package:appdev_md/services/auth_service.dart';
 import 'package:image_picker/image_picker.dart';
 
 /// A drawer widget that displays user information and navigation options
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
+
+  /// Performs the logout operation
+  void _performLogout(BuildContext context, UserProvider userProvider) {
+    // Clear the user data first to ensure UI updates
+    userProvider.clearUser();
+
+    // Navigate to login page
+    NavigationHelper.navigateAndReplaceNamed(context, '/login');
+
+    // Then perform the actual logout in the background
+    _logoutFromServer();
+  }
+
+  /// Logs out from the server
+  Future<void> _logoutFromServer() async {
+    try {
+      // Create API service
+      final apiService = ApiService(baseUrl: 'http://localhost:8000');
+      final authService = AuthService(apiService: apiService);
+
+      // Logout
+      await authService.logout();
+    } catch (e) {
+      // Ignore errors during logout
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,11 +111,11 @@ class AppDrawer extends StatelessWidget {
           SwitchListTile(
             title: const Text('Dark Mode'),
             secondary: Icon(
-              userProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+              userProvider.themeMode == ThemeMode.dark ? Icons.dark_mode : Icons.light_mode,
             ),
-            value: userProvider.isDarkMode,
+            value: userProvider.themeMode == ThemeMode.dark,
             onChanged: (value) {
-              userProvider.toggleDarkMode();
+              userProvider.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
             },
           ),
           const Divider(),
@@ -118,11 +146,14 @@ class AppDrawer extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              // Clear the user data
-              Provider.of<UserProvider>(context, listen: false).clearUser();
-              Navigator.pop(context); // Close the dialog
-              // Navigate to login page
-              NavigationHelper.navigateAndReplaceNamed(context, '/login');
+              // Get the user provider
+              final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+              // Close the dialog first
+              Navigator.pop(context);
+
+              // Then perform the logout
+              _performLogout(context, userProvider);
             },
             child: const Text('Logout'),
           ),
@@ -144,38 +175,59 @@ class AppDrawer extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.photo_camera),
               title: const Text('Take a photo'),
-              onTap: () async {
+              onTap: () {
                 Navigator.pop(context);
-                final picker = ImagePicker();
-                final pickedFile = await picker.pickImage(source: ImageSource.camera);
-                if (pickedFile != null) {
-                  // In a real app, you would upload this file to a server
-                  // and get back a URL. For now, we'll just use a placeholder.
-                  userProvider.updateUser(
-                    profileImageUrl: 'https://example.com/profile.jpg',
-                  );
-                }
+                _pickAndUploadImage(context, userProvider, ImageSource.camera);
               },
             ),
             ListTile(
               leading: const Icon(Icons.photo_library),
               title: const Text('Choose from gallery'),
-              onTap: () async {
+              onTap: () {
                 Navigator.pop(context);
-                final picker = ImagePicker();
-                final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-                if (pickedFile != null) {
-                  // In a real app, you would upload this file to a server
-                  // and get back a URL. For now, we'll just use a placeholder.
-                  userProvider.updateUser(
-                    profileImageUrl: 'https://example.com/profile.jpg',
-                  );
-                }
+                _pickAndUploadImage(context, userProvider, ImageSource.gallery);
               },
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// Picks and uploads a profile image
+  Future<void> _pickAndUploadImage(BuildContext context, UserProvider userProvider, ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: source);
+
+      if (pickedFile != null) {
+        // Create API service
+        final apiService = ApiService(baseUrl: 'http://localhost:8000');
+        final authService = AuthService(apiService: apiService);
+
+        // Get the current user
+        final user = userProvider.user;
+
+        if (user != null) {
+          // Upload the image
+          try {
+            final file = File(pickedFile.path);
+            await authService.uploadProfilePicture(user, file);
+
+            // Update the user with a placeholder URL for now
+            userProvider.updateUser(
+              profileImageUrl: 'https://example.com/profile.jpg',
+            );
+          } catch (e) {
+            // If upload fails, still update with a placeholder
+            userProvider.updateUser(
+              profileImageUrl: 'https://example.com/profile.jpg',
+            );
+          }
+        }
+      }
+    } catch (e) {
+      // Ignore errors during image picking
+    }
   }
 }

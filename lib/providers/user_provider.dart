@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:appdev_md/models/user.dart';
+import 'package:appdev_md/services/theme_service.dart';
 
 /// Provider class to manage user state
 class UserProvider extends ChangeNotifier {
   /// Current user - null when not logged in
   User? _user;
+
+  /// Theme service for managing theme preferences
+  final ThemeService _themeService = ThemeService();
+
+  /// Current theme mode
+  ThemeMode _themeMode = ThemeMode.system;
 
   /// Check if user is logged in
   bool get isLoggedIn => _user != null;
@@ -12,12 +19,24 @@ class UserProvider extends ChangeNotifier {
   /// Get the current user
   User? get user => _user;
 
-  /// Get whether dark mode is enabled
-  bool get isDarkMode => _user?.isDarkMode ?? false;
+  /// Get the current theme mode
+  ThemeMode get themeMode => _themeMode;
+
+  /// Initialize the provider
+  Future<void> initialize() async {
+    _themeMode = await _themeService.getThemeMode();
+    notifyListeners();
+  }
 
   /// Set the user (login)
   void setUser(User user) {
     _user = user;
+
+    // Set theme mode based on user preference
+    if (user.theme != 'system') {
+      _themeMode = _themeService.getThemeModeFromString(user.theme);
+    }
+
     notifyListeners();
   }
 
@@ -33,6 +52,7 @@ class UserProvider extends ChangeNotifier {
     String? lastName,
     String? email,
     String? profileImageUrl,
+    String? theme,
   }) {
     if (_user != null) {
       _user = _user!.copyWith(
@@ -40,24 +60,32 @@ class UserProvider extends ChangeNotifier {
         lastName: lastName,
         email: email,
         profileImageUrl: profileImageUrl,
+        theme: theme,
       );
+
+      // Update theme mode if theme was changed
+      if (theme != null) {
+        _themeMode = _themeService.getThemeModeFromString(theme);
+        _themeService.setThemeMode(_themeMode);
+      }
+
       notifyListeners();
     }
   }
 
-  /// Toggle dark mode
-  void toggleDarkMode() {
+  /// Set the theme mode
+  Future<void> setThemeMode(ThemeMode mode) async {
+    _themeMode = mode;
+
+    // Update user theme preference if logged in
     if (_user != null) {
-      _user = _user!.copyWith(isDarkMode: !_user!.isDarkMode);
-    } else {
-      // Create a default user with dark mode enabled if no user exists
-      _user = User(
-        firstName: '',
-        lastName: '',
-        email: '',
-        isDarkMode: true,
-      );
+      final themeString = _themeService.getThemeString(mode);
+      _user = _user!.copyWith(theme: themeString);
     }
+
+    // Save theme preference
+    await _themeService.setThemeMode(mode);
+
     notifyListeners();
   }
 }

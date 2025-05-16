@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:appdev_md/pages/splash_screen.dart';
 import 'package:appdev_md/utils/theme.dart';
+import 'package:appdev_md/utils/config.dart';
+import 'package:appdev_md/utils/logger.dart';
 import 'package:appdev_md/providers/user_provider.dart';
 import 'package:appdev_md/pages/auth/login_page.dart';
 import 'package:appdev_md/pages/auth/register_page.dart';
@@ -9,12 +11,52 @@ import 'package:appdev_md/pages/auth/forgot_password_page.dart';
 import 'package:appdev_md/pages/dashboard_page.dart';
 import 'package:appdev_md/pages/profile_page.dart';
 import 'package:appdev_md/pages/settings_page.dart';
+import 'package:appdev_md/services/api_service.dart';
+import 'package:appdev_md/services/auth_service.dart';
 
-void main() {
+// Global services for easy access
+final apiService = ApiService(baseUrl: AppConfig.apiBaseUrl);
+final authService = AuthService(apiService: apiService);
+
+// Log API configuration for debugging
+void logApiConfig() {
+  Logger.info('API Base URL: ${AppConfig.apiBaseUrl}');
+  Logger.debug('Using API service: $apiService');
+  Logger.debug('Using auth service: $authService');
+}
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Log API configuration for debugging
+  logApiConfig();
+
+  // Create user provider
+  final userProvider = UserProvider();
+
+  // Initialize theme and check for existing user
+  await userProvider.initialize();
+
+  // Check if we have a stored token
+  final token = await apiService.getToken();
+  if (token != null) {
+    Logger.info('Found stored token, attempting to get current user');
+    try {
+      final user = await authService.getCurrentUser();
+      if (user != null) {
+        Logger.info('Successfully retrieved current user: ${user.email}');
+        userProvider.setUser(user);
+      }
+    } catch (e) {
+      Logger.error('Error getting current user', e);
+      // Clear token if it's invalid
+      await apiService.clearToken();
+    }
+  }
+
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => UserProvider(),
+    ChangeNotifierProvider.value(
+      value: userProvider,
       child: const MyApp(),
     ),
   );
@@ -31,7 +73,7 @@ class MyApp extends StatelessWidget {
       title: 'Motion Detector',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: userProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      themeMode: userProvider.themeMode,
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
       routes: {

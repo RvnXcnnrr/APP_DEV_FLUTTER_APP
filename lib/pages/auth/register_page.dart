@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:appdev_md/widgets/auth_button.dart';
 import 'package:appdev_md/widgets/auth_text_field.dart';
+import 'package:appdev_md/main.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -20,6 +21,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _acceptTerms = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -31,7 +33,7 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  void _register() {
+  Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
       if (!_acceptTerms) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -39,19 +41,85 @@ class _RegisterPageState extends State<RegisterPage> {
         );
         return;
       }
-      
-      setState(() => _isLoading = true);
-      
-      // Simulate registration delay
-      Future.delayed(const Duration(seconds: 1), () {
-        if (mounted) {
-          setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Registration successful! Please login.')),
-          );
-          Navigator.pushReplacementNamed(context, '/login');
-        }
+
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
       });
+
+      try {
+        // Use the global authService defined in main.dart
+        // ignore: avoid_print
+        print('Starting registration process...');
+
+        // Register - this now returns void, not a User
+        await authService.register(
+          _firstNameController.text,
+          _lastNameController.text,
+          _emailController.text,
+          _passwordController.text,
+        );
+
+        // ignore: avoid_print
+        print('Registration API call completed successfully');
+
+        if (mounted) {
+          // Show success message about email verification
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Registration successful! Please check your email to verify your account before logging in.'),
+              duration: Duration(seconds: 5),
+            ),
+          );
+
+          // Navigate back to login page
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        // ignore: avoid_print
+        print('Registration error caught: $e');
+
+        if (mounted) {
+          setState(() {
+            // Show more detailed error message
+            if (e.toString().contains('email')) {
+              if (e.toString().contains('already registered') || e.toString().contains('already exists')) {
+                _errorMessage = 'Email already exists. Please use a different email or try to login.';
+              } else {
+                _errorMessage = 'Email is invalid. Please enter a valid email address.';
+              }
+            } else if (e.toString().contains('password')) {
+              _errorMessage = 'Password is too weak. Use at least 8 characters with numbers and letters.';
+            } else if (e.toString().contains('verification e-mail')) {
+              // This is actually a success case - handle it as such
+              _errorMessage = null;
+
+              // Show success message about email verification
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Registration successful! Please check your email to verify your account before logging in.'),
+                  duration: Duration(seconds: 5),
+                ),
+              );
+
+              // Navigate back to login page
+              Navigator.pop(context);
+              return;
+            } else {
+              _errorMessage = 'Registration failed: ${e.toString().replaceAll('ApiException: ', '')}';
+            }
+            // ignore: avoid_print
+            print('Registration error details: $e');
+          });
+        }
+      } finally {
+        // Always ensure loading state is reset
+        if (mounted) {
+          // ignore: avoid_print
+          print('Resetting loading state');
+          setState(() => _isLoading = false);
+        }
+      }
     }
   }
 
@@ -208,6 +276,15 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                     ],
                   ),
+                  if (_errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        _errorMessage!,
+                        style: TextStyle(color: Theme.of(context).colorScheme.error),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   const SizedBox(height: 24),
                   AuthButton(
                     text: 'Register',

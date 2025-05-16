@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:appdev_md/widgets/auth_button.dart';
 import 'package:appdev_md/widgets/auth_text_field.dart';
-import 'package:appdev_md/models/user.dart';
 import 'package:appdev_md/providers/user_provider.dart';
+import 'package:appdev_md/main.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,6 +18,7 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -26,31 +27,33 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _login() {
+  bool _showResendButton = false;
+  String _unverifiedEmail = '';
+
+  Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+        _showResendButton = false;
+      });
 
-      // For development purposes, allow login without credentials
-      // In a real app, you would validate credentials against a backend
+      try {
+        // Use the global authService defined in main.dart
 
-      // Import the provider at the top of the file
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
+        // Get user provider
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
 
-      // Create a user with the entered email
-      final user = User(
-        firstName: 'Dev',
-        lastName: 'User',
-        email: _emailController.text,
-      );
+        // Login
+        final user = await authService.login(
+          _emailController.text,
+          _passwordController.text,
+        );
 
-      // Simulate login delay
-      Future.delayed(const Duration(seconds: 1), () {
+        // Set user in provider
+        userProvider.setUser(user);
+
         if (mounted) {
-          // Set the user in the provider
-          userProvider.setUser(user);
-
-          setState(() => _isLoading = false);
-
           // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Login successful!')),
@@ -59,7 +62,48 @@ class _LoginPageState extends State<LoginPage> {
           // Navigate to dashboard
           Navigator.pushReplacementNamed(context, '/dashboard');
         }
+      } catch (e) {
+        setState(() {
+          if (e.toString().contains('Email not verified')) {
+            _errorMessage = 'Email not verified. Please check your email for verification link or click below to resend.';
+            _showResendButton = true;
+            _unverifiedEmail = _emailController.text;
+          } else {
+            _errorMessage = 'Invalid email or password';
+          }
+        });
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
+    }
+  }
+
+  Future<void> _resendVerificationEmail() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await authService.resendVerificationEmail(_unverifiedEmail);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Verification email sent! Please check your inbox.'),
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to resend verification email. Please try again later.';
       });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -146,6 +190,27 @@ class _LoginPageState extends State<LoginPage> {
                       child: const Text('Forgot Password?'),
                     ),
                   ),
+                  if (_errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Column(
+                        children: [
+                          Text(
+                            _errorMessage!,
+                            style: TextStyle(color: Theme.of(context).colorScheme.error),
+                            textAlign: TextAlign.center,
+                          ),
+                          if (_showResendButton)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: TextButton(
+                                onPressed: _resendVerificationEmail,
+                                child: const Text('Resend Verification Email'),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   const SizedBox(height: 24),
                   AuthButton(
                     text: 'Login',

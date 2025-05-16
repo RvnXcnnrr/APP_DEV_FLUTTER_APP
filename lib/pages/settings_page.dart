@@ -27,15 +27,19 @@ class SettingsPage extends StatelessWidget {
               _showAppearanceSettings(context);
             },
           ),
-          SwitchListTile(
-            title: const Text('Dark Mode'),
-            subtitle: const Text('Toggle between light and dark theme'),
-            secondary: Icon(
-              userProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+          ListTile(
+            title: const Text('Theme'),
+            subtitle: Text('Current: ${_getThemeModeName(userProvider.themeMode)}'),
+            leading: Icon(
+              userProvider.themeMode == ThemeMode.dark
+                  ? Icons.dark_mode
+                  : userProvider.themeMode == ThemeMode.light
+                      ? Icons.light_mode
+                      : Icons.brightness_auto,
             ),
-            value: userProvider.isDarkMode,
-            onChanged: (value) {
-              userProvider.toggleDarkMode();
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              _showThemeSettings(context, userProvider);
             },
           ),
           const Divider(),
@@ -124,6 +128,72 @@ class SettingsPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Shows theme settings dialog
+  void _showThemeSettings(BuildContext context, UserProvider userProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Theme Settings'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<ThemeMode>(
+              title: const Text('System'),
+              value: ThemeMode.system,
+              groupValue: userProvider.themeMode,
+              onChanged: (value) {
+                if (value != null) {
+                  userProvider.setThemeMode(value);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('Light'),
+              value: ThemeMode.light,
+              groupValue: userProvider.themeMode,
+              onChanged: (value) {
+                if (value != null) {
+                  userProvider.setThemeMode(value);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('Dark'),
+              value: ThemeMode.dark,
+              groupValue: userProvider.themeMode,
+              onChanged: (value) {
+                if (value != null) {
+                  userProvider.setThemeMode(value);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Gets the name of a theme mode
+  String _getThemeModeName(ThemeMode themeMode) {
+    switch (themeMode) {
+      case ThemeMode.system:
+        return 'System';
+      case ThemeMode.light:
+        return 'Light';
+      case ThemeMode.dark:
+        return 'Dark';
+    }
   }
 
   /// Shows about dialog

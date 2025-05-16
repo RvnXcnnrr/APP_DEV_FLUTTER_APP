@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:appdev_md/widgets/auth_text_field.dart';
 import 'package:appdev_md/widgets/auth_button.dart';
+import 'package:appdev_md/services/api_service.dart';
+import 'package:appdev_md/services/auth_service.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -13,6 +15,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -20,20 +23,39 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     super.dispose();
   }
 
-  void _resetPassword() {
+  Future<void> _resetPassword() async {
     if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
 
-      // Simulate password reset delay
-      Future.delayed(const Duration(seconds: 1), () {
+      try {
+        // Create API service - use 10.0.2.2 instead of localhost for Android emulators
+        final apiService = ApiService(baseUrl: 'http://10.0.2.2:8000');
+        final authService = AuthService(apiService: apiService);
+
+        // Send password reset email
+        await authService.forgotPassword(_emailController.text);
+
         if (mounted) {
-          setState(() => _isLoading = false);
+          // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Password reset link sent to your email')),
           );
+
+          // Go back to login page
           Navigator.pop(context);
         }
-      });
+      } catch (e) {
+        setState(() {
+          _errorMessage = 'Failed to send reset link. Please try again.';
+        });
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
     }
   }
 
@@ -82,6 +104,15 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       return null;
                     },
                   ),
+                  if (_errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        _errorMessage!,
+                        style: TextStyle(color: Theme.of(context).colorScheme.error),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   const SizedBox(height: 32),
                   AuthButton(
                     text: 'Reset Password',

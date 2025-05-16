@@ -1,0 +1,8 @@
+Hello from Motion Detector!
+
+You're receiving this email because user {{ user.get_username }} has given this address as their email address to connect their account.
+
+To confirm this is correct, please click the following link:
+{{ activate_url }}
+
+Thank you for using Motion Detector!
