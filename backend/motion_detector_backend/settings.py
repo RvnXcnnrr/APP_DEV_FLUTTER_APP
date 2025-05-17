@@ -183,10 +183,17 @@ CORS_ALLOW_ALL_ORIGINS = True
 #     "http://127.0.0.1:3000",
 # ]
 
+# CSRF settings
+CSRF_TRUSTED_ORIGINS = [
+    "https://app-dev-flutter-app.onrender.com",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
 # Django AllAuth settings
 SITE_ID = 1
 # Use environment variable for SITE_DOMAIN in production
-SITE_DOMAIN = os.environ.get('SITE_DOMAIN', 'localhost:8000')  # Used for email verification links
+SITE_DOMAIN = os.environ.get('SITE_DOMAIN', 'app-dev-flutter-app.onrender.com')  # Used for email verification links
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USERNAME_REQUIRED = False
@@ -220,7 +227,7 @@ DEFAULT_FROM_EMAIL = 'reyfoxconner@gmail.com'
 # Frontend URL for password reset and other redirects
 # In development, this should be your Flutter app's URL
 # In production, this should be your deployed frontend URL
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://127.0.0.1:8000')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://app-dev-flutter-app.onrender.com')
 
 # dj-rest-auth settings
 REST_AUTH = {
