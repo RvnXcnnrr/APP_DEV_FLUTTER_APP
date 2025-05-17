@@ -7,12 +7,19 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-your-secret-key-here'
+# Use environment variable for SECRET_KEY in production
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-your-secret-key-here')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Set DEBUG to False in production
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']
+# Add your Render web service URL to allowed hosts
+ALLOWED_HOSTS = ['*']  # For development
+# In production, specify your domain
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 # Application definition
 INSTALLED_APPS = [
@@ -78,6 +85,9 @@ WSGI_APPLICATION = 'motion_detector_backend.wsgi.application'
 ASGI_APPLICATION = 'motion_detector_backend.asgi.application'
 
 # Channels settings
+# Use InMemoryChannelLayer for development and testing
+# For production, we'll continue to use InMemoryChannelLayer since this is a small app
+# For larger production apps, consider using Redis or other backends
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels.layers.InMemoryChannelLayer',
@@ -164,7 +174,8 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 # Django AllAuth settings
 SITE_ID = 1
-SITE_DOMAIN = 'localhost:8000'  # Used for email verification links
+# Use environment variable for SITE_DOMAIN in production
+SITE_DOMAIN = os.environ.get('SITE_DOMAIN', 'localhost:8000')  # Used for email verification links
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USERNAME_REQUIRED = False
@@ -179,7 +190,8 @@ ACCOUNT_ADAPTER = 'motion_detector_backend.users.adapters.CustomAccountAdapter'
 ACCOUNT_DEFAULT_USER_STATUS = False  # Users are inactive by default
 
 # Protocol settings for URLs in emails
-ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'
+# Use HTTPS in production
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https' if not DEBUG else 'http'
 
 # Email settings
 # For development, use SMTP backend to send real emails
@@ -197,7 +209,7 @@ DEFAULT_FROM_EMAIL = 'reyfoxconner@gmail.com'
 # Frontend URL for password reset and other redirects
 # In development, this should be your Flutter app's URL
 # In production, this should be your deployed frontend URL
-FRONTEND_URL = 'http://127.0.0.1:8000'  # Changed to use the backend URL since Flutter app expects this
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://127.0.0.1:8000')
 
 # dj-rest-auth settings
 REST_AUTH = {
