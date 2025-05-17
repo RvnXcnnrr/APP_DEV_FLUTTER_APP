@@ -1,4 +1,3 @@
-
 import 'dart:io';
 import 'package:appdev_md/models/user.dart';
 import 'package:appdev_md/services/api_service.dart';
@@ -17,15 +16,11 @@ class AuthService {
     try {
       Logger.info('Attempting login for email: $email');
 
-      final response = await _apiService.post(
-        'api/auth/login/',
-        {
-          'email': email,
-          'password': password,
-          'username': email, // Some backends might require username
-        },
-        requiresAuth: false,
-      );
+      final response = await _apiService.post('api/auth/login/', {
+        'email': email,
+        'password': password,
+        'username': email, // Some backends might require username
+      }, requiresAuth: false);
 
       Logger.debug('Login response: $response');
 
@@ -55,7 +50,9 @@ class AuthService {
         }
 
         if (token == null || token.isEmpty) {
-          Logger.warning('No token found in standard fields, checking cookies or headers');
+          Logger.warning(
+            'No token found in standard fields, checking cookies or headers',
+          );
 
           // For debugging purposes, log all keys in the response
           Logger.debug('Response keys: ${response.keys.join(', ')}');
@@ -63,21 +60,22 @@ class AuthService {
           // If we still don't have a token, we'll continue anyway since we have the user data
           // This allows login to work even if token extraction fails
           if (token == null || token.isEmpty) {
-            Logger.warning('Proceeding without token - user may need to log in again');
+            Logger.warning(
+              'Proceeding without token - user may need to log in again',
+            );
           }
         }
 
         // Only store the token if we found one
         if (token != null && token.isNotEmpty) {
-          Logger.debug('Found token in response: ${token.substring(0, token.length > 10 ? 10 : token.length)}...');
+          Logger.debug(
+            'Found token in response: ${token.substring(0, token.length > 10 ? 10 : token.length)}...',
+          );
           await _apiService.setToken(token);
         }
       } else {
         Logger.error('Response is not a Map: $response');
-        throw ApiException(
-          statusCode: 500,
-          message: 'Invalid response format',
-        );
+        throw ApiException(statusCode: 500, message: 'Invalid response format');
       }
 
       // Create user object from response
@@ -89,23 +87,32 @@ class AuthService {
 
       if (username.isEmpty) {
         username = user.email;
-        Logger.warning('Username is empty after login, using email as username: $username');
+        Logger.warning(
+          'Username is empty after login, using email as username: $username',
+        );
         userWithValidUsername = user.copyWith(username: username);
       }
 
       Logger.debug('Created user object: $userWithValidUsername');
-      Logger.debug('Email verified status: ${userWithValidUsername.emailVerified}');
+      Logger.debug(
+        'Email verified status: ${userWithValidUsername.emailVerified}',
+      );
 
       // Check if email is verified
       if (!userWithValidUsername.emailVerified) {
-        Logger.warning('Email not verified for user: ${userWithValidUsername.email}');
+        Logger.warning(
+          'Email not verified for user: ${userWithValidUsername.email}',
+        );
 
         // Try to get user details to double-check verification status
         try {
-          final userDetailsResponse = await _apiService.get('api/users/profile/');
+          final userDetailsResponse = await _apiService.get(
+            'api/users/profile/',
+          );
           Logger.debug('User details response: $userDetailsResponse');
 
-          if (userDetailsResponse is Map && userDetailsResponse.containsKey('email_verified')) {
+          if (userDetailsResponse is Map &&
+              userDetailsResponse.containsKey('email_verified')) {
             bool emailVerified = userDetailsResponse['email_verified'] == true;
 
             if (emailVerified) {
@@ -120,7 +127,8 @@ class AuthService {
         // If we get here, the email is definitely not verified
         throw ApiException(
           statusCode: 403,
-          message: 'Email not verified. Please check your email for verification link.',
+          message:
+              'Email not verified. Please check your email for verification link.',
         );
       }
 
@@ -136,22 +144,30 @@ class AuthService {
   }
 
   /// Registers a new user
-  Future<void> register(String firstName, String lastName, String email, String password) async {
+  Future<void> register(
+    String firstName,
+    String lastName,
+    String email,
+    String password,
+  ) async {
     try {
       Logger.info('Sending registration request to API...');
       Logger.debug('API URL: ${_apiService.baseUrl}/api/auth/registration/');
-      Logger.debug('Registration data: firstName=$firstName, lastName=$lastName, email=$email');
+      Logger.debug(
+        'Registration data: firstName=$firstName, lastName=$lastName, email=$email',
+      );
 
       // Use the correct registration endpoint
       final response = await _apiService.post(
-        'api/auth/registration/',  // Django dj-rest-auth registration endpoint
+        'api/auth/registration/', // Django dj-rest-auth registration endpoint
         {
           'first_name': firstName,
           'last_name': lastName,
           'email': email,
-          'password1': password, // Django AllAuth expects password1 and password2
+          'password1':
+              password, // Django AllAuth expects password1 and password2
           'password2': password, // Confirmation password
-          'username': email,     // Use email as username
+          'username': email, // Use email as username
         },
         requiresAuth: false,
       );
@@ -195,13 +211,9 @@ class AuthService {
       Logger.info('Sending password reset email to: $email');
       Logger.debug('Using correct dj-rest-auth password reset endpoint');
 
-      await _apiService.post(
-        'api/auth/password/reset/',
-        {
-          'email': email,
-        },
-        requiresAuth: false,
-      );
+      await _apiService.post('api/auth/password/reset/', {
+        'email': email,
+      }, requiresAuth: false);
 
       Logger.info('Password reset email sent successfully');
     } catch (e) {
@@ -212,20 +224,21 @@ class AuthService {
   }
 
   /// Confirms password reset with new password
-  Future<void> confirmPasswordReset(String uid, String token, String password1, String password2) async {
+  Future<void> confirmPasswordReset(
+    String uid,
+    String token,
+    String password1,
+    String password2,
+  ) async {
     try {
       Logger.info('Confirming password reset');
 
-      await _apiService.post(
-        'api/auth/password/reset/confirm/',
-        {
-          'uid': uid,
-          'token': token,
-          'new_password1': password1,
-          'new_password2': password2,
-        },
-        requiresAuth: false,
-      );
+      await _apiService.post('api/auth/password/reset/confirm/', {
+        'uid': uid,
+        'token': token,
+        'new_password1': password1,
+        'new_password2': password2,
+      }, requiresAuth: false);
 
       Logger.info('Password reset confirmed successfully');
     } catch (e) {
@@ -239,13 +252,9 @@ class AuthService {
     try {
       Logger.info('Resending verification email to: $email');
 
-      await _apiService.post(
-        'api/users/resend-verification-email/',
-        {
-          'email': email,
-        },
-        requiresAuth: false,
-      );
+      await _apiService.post('api/users/resend-verification-email/', {
+        'email': email,
+      }, requiresAuth: false);
 
       Logger.info('Verification email resent successfully');
     } catch (e) {
@@ -288,29 +297,28 @@ class AuthService {
       Logger.info('Updating user profile: ${user.firstName} ${user.lastName}');
 
       // Create a map with ONLY the fields we want to update
-      // Explicitly exclude username to avoid validation errors
+      // Explicitly exclude username and email to avoid validation errors
       final userData = {
         'first_name': user.firstName,
         'last_name': user.lastName,
         'theme_preference': user.theme,
-        // Removed username field completely
+        // Don't include email or username fields
       };
 
       Logger.debug('User data being sent to backend: $userData');
 
       // First try the dj-rest-auth endpoint with PATCH (partial update)
       try {
-        final response = await _apiService.patch(
-          'api/auth/user/',
-          userData,
-        );
+        final response = await _apiService.patch('api/auth/user/', userData);
 
         Logger.info('Profile updated successfully with dj-rest-auth endpoint');
         Logger.debug('Response from server: $response');
         return User.fromJson(response);
       } catch (e) {
         // If that fails, try the custom endpoint with PATCH
-        Logger.warning('Failed to update profile with dj-rest-auth endpoint: $e');
+        Logger.warning(
+          'Failed to update profile with dj-rest-auth endpoint: $e',
+        );
         Logger.info('Trying custom endpoint...');
 
         final response = await _apiService.patch(
@@ -330,14 +338,14 @@ class AuthService {
   }
 
   /// Updates the user's password
-  Future<void> updatePassword(String currentPassword, String newPassword) async {
-    await _apiService.post(
-      'api/auth/change-password/',
-      {
-        'current_password': currentPassword,
-        'new_password': newPassword,
-      },
-    );
+  Future<void> updatePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    await _apiService.post('api/auth/change-password/', {
+      'current_password': currentPassword,
+      'new_password': newPassword,
+    });
   }
 
   /// Updates the user's theme preference
@@ -347,13 +355,10 @@ class AuthService {
 
       // Try the custom endpoint first with PATCH
       try {
-        final response = await _apiService.patch(
-          'api/users/profile/theme/',
-          {
-            'theme_preference': theme,
-            // Removed username field completely
-          },
-        );
+        final response = await _apiService.patch('api/users/profile/theme/', {
+          'theme_preference': theme,
+          // Removed username field completely
+        });
 
         Logger.info('Theme preference updated successfully');
         Logger.debug('Response from server: $response');
@@ -376,7 +381,9 @@ class AuthService {
           userData,
         );
 
-        Logger.info('Theme preference updated successfully with full profile update');
+        Logger.info(
+          'Theme preference updated successfully with full profile update',
+        );
         Logger.debug('Response from server: $response');
         return User.fromJson(response);
       }
@@ -406,7 +413,9 @@ class AuthService {
         return User.fromJson(response);
       } catch (e) {
         // If that fails, try the custom endpoint
-        Logger.warning('Failed to upload profile picture with dj-rest-auth endpoint: $e');
+        Logger.warning(
+          'Failed to upload profile picture with dj-rest-auth endpoint: $e',
+        );
         Logger.info('Trying custom endpoint...');
 
         // For the custom endpoint, use PUT method since it's an UpdateAPIView
@@ -417,7 +426,9 @@ class AuthService {
           method: 'PUT', // Use PUT for UpdateAPIView
         );
 
-        Logger.info('Profile picture uploaded successfully with custom endpoint');
+        Logger.info(
+          'Profile picture uploaded successfully with custom endpoint',
+        );
         return User.fromJson(response);
       }
     } catch (e) {
@@ -427,4 +438,3 @@ class AuthService {
     }
   }
 }
-

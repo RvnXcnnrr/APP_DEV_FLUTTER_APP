@@ -13,6 +13,7 @@ const AuthTextField = ({
   type = 'text',
   placeholder = '',
   error = '',
+  helperText = '',
   fullWidth = true,
   disabled = false,
   isDarkMode = false,
@@ -49,6 +50,12 @@ const AuthTextField = ({
     marginTop: '5px',
   };
 
+  const helperTextStyle = {
+    color: theme.textSecondary || '#666',
+    fontSize: '12px',
+    marginTop: '5px',
+  };
+
   return (
     <div style={containerStyle}>
       {label && <label style={labelStyle}>{label}</label>}
@@ -65,6 +72,7 @@ const AuthTextField = ({
         disabled={disabled}
       />
       {error && <div style={errorStyle}>{error}</div>}
+      {helperText && !error && <div style={helperTextStyle}>{helperText}</div>}
     </div>
   );
 };

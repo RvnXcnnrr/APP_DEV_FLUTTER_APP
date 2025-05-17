@@ -151,11 +151,11 @@ class AuthService {
    */
   async updateProfile(user, updates) {
     try {
-      // Make request to update profile
+      // Make request to update profile - only include first name and last name
       const userData = await this.apiService.patch('api/auth/user/', {
         first_name: updates.firstName !== undefined ? updates.firstName : user.firstName,
         last_name: updates.lastName !== undefined ? updates.lastName : user.lastName,
-        email: updates.email !== undefined ? updates.email : user.email,
+        // Don't include email in profile updates
       });
 
       // Create updated user object

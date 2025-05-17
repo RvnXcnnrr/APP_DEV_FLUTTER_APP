@@ -38,11 +38,8 @@ const ProfilePage = () => {
       newErrors.lastName = 'Last name is required';
     }
 
-    if (!email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\\S+@\\S+\\.\\S+/.test(email)) {
-      newErrors.email = 'Email is invalid';
-    }
+    // Don't validate email since it's disabled and can't be changed
+    // Email validation is only needed for registration or email change
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -51,10 +48,11 @@ const ProfilePage = () => {
   // Handle save
   const handleSave = () => {
     if (validateForm()) {
+      // Only update first name and last name, not email
       updateUser({
         firstName,
         lastName,
-        email,
+        // Don't include email in the update
       });
       setIsEditing(false);
       alert('Profile updated successfully!');
@@ -217,8 +215,9 @@ const ProfilePage = () => {
             onChange={setEmail}
             type="email"
             placeholder="Enter your email"
-            error={errors.email}
-            disabled={!isEditing}
+            error={null} // Remove error validation for email
+            disabled={true} // Always disable email field
+            helperText="Email cannot be changed"
             isDarkMode={isDarkMode}
           />
 

@@ -70,12 +70,44 @@ class CustomUserDetailsSerializer(UserDetailsSerializer):
     profile_picture = serializers.ImageField(required=False)
     theme_preference = serializers.CharField(required=False)
     email_verified = serializers.BooleanField(read_only=True)
+    first_name = serializers.CharField(required=False)
+    last_name = serializers.CharField(required=False)
 
     class Meta:
         model = User
         fields = ('pk', 'username', 'email', 'first_name', 'last_name',
                   'profile_picture', 'theme_preference', 'email_verified')
         read_only_fields = ('email', 'email_verified')
+
+    def update(self, instance, validated_data):
+        """
+        Override update method to handle first_name and last_name properly
+        """
+        print(f"CustomUserDetailsSerializer.update() called with validated_data: {validated_data}")
+
+        # Safely get current values
+        current_first_name = getattr(instance, 'first_name', '')
+        current_last_name = getattr(instance, 'last_name', '')
+
+        # Update first_name and last_name if provided
+        if 'first_name' in validated_data:
+            print(f"Updating first_name from '{current_first_name}' to '{validated_data['first_name']}'")
+            instance.first_name = validated_data.pop('first_name')
+        if 'last_name' in validated_data:
+            print(f"Updating last_name from '{current_last_name}' to '{validated_data['last_name']}'")
+            instance.last_name = validated_data.pop('last_name')
+
+        # Update other fields
+        instance = super().update(instance, validated_data)
+
+        # Save the instance
+        print(f"Saving instance with first_name='{getattr(instance, 'first_name', '')}', last_name='{getattr(instance, 'last_name', '')}'")
+        instance.save()
+
+        # Verify the changes were saved
+        print(f"After save: first_name='{getattr(instance, 'first_name', '')}', last_name='{getattr(instance, 'last_name', '')}'")
+
+        return instance
 
 class ProfilePictureSerializer(serializers.ModelSerializer):
     """

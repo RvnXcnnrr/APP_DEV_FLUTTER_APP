@@ -27,6 +27,52 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return self.request.user
 
+    def update(self, request, **kwargs):
+        """
+        Override update method to handle partial updates properly
+        """
+        # Always use partial=True for PATCH requests
+        partial = kwargs.pop('partial', True)
+        instance = self.get_object()
+
+        # Check if user is authenticated
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Authentication required"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        # Log the request data for debugging
+        print(f"Updating user profile with data: {request.data}")
+
+        # Safely access first_name and last_name
+        first_name = getattr(instance, 'first_name', '')
+        last_name = getattr(instance, 'last_name', '')
+        print(f"User before update - first_name: {first_name}, last_name: {last_name}")
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+
+        # Print validated data
+        print(f"Validated data: {serializer.validated_data}")
+
+        # Perform the update
+        self.perform_update(serializer)
+
+        # Explicitly save the instance to ensure changes are persisted
+        instance.save()
+
+        # Refresh from database to verify changes were saved
+        instance.refresh_from_db()
+
+        # Safely access first_name and last_name after update
+        first_name = getattr(instance, 'first_name', '')
+        last_name = getattr(instance, 'last_name', '')
+        print(f"User after update - first_name: {first_name}, last_name: {last_name}")
+
+        # Return the updated user data
+        return Response(serializer.data)
+
 class ProfilePictureUpdateView(generics.UpdateAPIView):
     """
     View for updating profile picture
