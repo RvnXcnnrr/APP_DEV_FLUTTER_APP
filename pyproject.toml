@@ -1,9 +1,38 @@
+[tool.poetry]
+name = "motion-detector-backend"
+version = "0.1.0"
+description = "Django REST Framework backend for the Motion Detector application"
+authors = ["Your Name <your.email@example.com>"]
+packages = [{include = "backend"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+Django = "5.0.6"
+djangorestframework = "3.14.0"
+django-cors-headers = "4.3.1"
+Pillow = "10.2.0"
+python-decouple = "3.8"
+dj-rest-auth = "5.0.2"
+djangorestframework-simplejwt = "5.3.1"
+django-allauth = "0.51.0"
+psycopg2-binary = "2.9.9"
+gunicorn = "21.2.0"
+whitenoise = "6.6.0"
+drf-yasg = "1.21.7"
+channels = "4.0.0"
+daphne = "4.0.0"
+dj-database-url = "2.1.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.pyright]
 include = ["backend"]
 exclude = ["**/node_modules", "**/__pycache__"]
 reportMissingImports = true
 reportMissingTypeStubs = false
-pythonVersion = "3.13"
+pythonVersion = "3.11"
 typeCheckingMode = "basic"
 reportOptionalCall = false
 reportOptionalMemberAccess = false
