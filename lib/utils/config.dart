@@ -30,7 +30,7 @@ class AppConfig {
   /// WebSocket configuration
   static String get wsBaseUrl {
     // Token for device authentication
-    const token = 'd1d5f3217b9e0ff734eb56e52bbd8f391943f39f';
+    const token = 'fe1f6c58646d8942c85cb5fc456990d4a639c1a0';
 
     // Use the same environment detection as apiBaseUrl
     switch (currentEnvironment) {
