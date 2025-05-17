@@ -25,9 +25,21 @@ const DashboardPage = () => {
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
-  const { isDarkMode, isTokenOwner, user } = useUser();
-  const { getEventsForDay, loadHistoricalEvents, isConnected: eventsConnected, accessDenied } = useMotionEvents();
+  const userContext = useUser();
+  const { isDarkMode, isTokenOwner, user } = userContext;
+  const motionContext = useMotionEvents();
+  const { getEventsForDay, loadHistoricalEvents, isConnected: eventsConnected, accessDenied } = motionContext;
   const theme = getTheme(isDarkMode);
+
+  // Debug user and motion contexts
+  useEffect(() => {
+    console.log('DashboardPage - User Context:', userContext);
+    console.log('DashboardPage - User:', user);
+    console.log('DashboardPage - isTokenOwner:', isTokenOwner);
+    console.log('DashboardPage - User email:', user?.email);
+    console.log('DashboardPage - Motion Context:', motionContext);
+    console.log('DashboardPage - Access Denied:', accessDenied);
+  }, [userContext, user, isTokenOwner, motionContext, accessDenied]);
 
   // Load historical events for the current month when the component mounts or the selected day changes
   useEffect(() => {
