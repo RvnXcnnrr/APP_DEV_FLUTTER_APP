@@ -21,12 +21,11 @@ import 'package:appdev_md/services/websocket_service.dart';
 // Global services for easy access
 final apiService = ApiService(baseUrl: AppConfig.apiBaseUrl);
 final authService = AuthService(apiService: apiService);
-final webSocketService = WebSocketService(
-  serverUrl: AppConfig.wsBaseUrl,
-);
+final webSocketService = WebSocketService(serverUrl: AppConfig.wsBaseUrl);
 
 // Log API configuration for debugging
 void logApiConfig() {
+  Logger.info('Current environment: ${AppConfig.currentEnvironment}');
   Logger.info('API Base URL: ${AppConfig.apiBaseUrl}');
   Logger.info('WebSocket URL: ${AppConfig.wsBaseUrl}');
   Logger.debug('Using API service: $apiService');
@@ -121,10 +120,8 @@ class MyApp extends StatelessWidget {
             final token = pathSegments[3];
 
             return MaterialPageRoute(
-              builder: (context) => ResetPasswordConfirmPage(
-                uid: uid,
-                token: token,
-              ),
+              builder:
+                  (context) => ResetPasswordConfirmPage(uid: uid, token: token),
             );
           }
         }
