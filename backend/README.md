@@ -156,7 +156,7 @@ The backend provides a WebSocket endpoint for real-time communication:
 WebSocket connections require authentication using a token parameter in the URL:
 - JWT token from user login
 - Device token for ESP32 devices
-- The hardcoded token `d6d5f5d99bbd616cce3452ad1d02cd6ae968b20d` for the ESP32_001 device
+- The hardcoded token `d1d5f3217b9e0ff734eb56e52bbd8f391943f39f` for the ESP32_001 device
 
 ### Message Format
 

@@ -18,6 +18,9 @@ export function UserProvider({ children }) {
   // Get whether dark mode is enabled
   const isDarkMode = user?.isDarkMode || false;
 
+  // Check if the user is the token owner (oracle.tech.143@gmail.com)
+  const isTokenOwner = user?.email === 'oracle.tech.143@gmail.com';
+
   // Set the user (login)
   const login = (user) => {
     setUser(user);
@@ -57,6 +60,7 @@ export function UserProvider({ children }) {
     user,
     isLoggedIn,
     isDarkMode,
+    isTokenOwner,
     login,
     logout,
     updateUser,

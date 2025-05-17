@@ -25,8 +25,8 @@ const DashboardPage = () => {
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
-  const { isDarkMode } = useUser();
-  const { getEventsForDay, loadHistoricalEvents, isConnected: eventsConnected } = useMotionEvents();
+  const { isDarkMode, isTokenOwner, user } = useUser();
+  const { getEventsForDay, loadHistoricalEvents, isConnected: eventsConnected, accessDenied } = useMotionEvents();
   const theme = getTheme(isDarkMode);
 
   // Load historical events for the current month when the component mounts or the selected day changes
@@ -575,6 +575,26 @@ const DashboardPage = () => {
           </div>
         </div>
 
+        {/* Access Denied Message */}
+        {accessDenied && (
+          <div style={{
+            backgroundColor: '#ffebee', // Light red background
+            color: '#d32f2f', // Red text
+            padding: '16px',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            textAlign: 'center',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+          }}>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '18px' }}>Access Denied</h3>
+            <p style={{ margin: 0, fontSize: '14px' }}>
+              Only the device owner can access this data.
+              <br />
+              Current user: {user?.email || 'Not logged in'}
+            </p>
+          </div>
+        )}
+
         {/* Event list */}
         <div style={{
           backgroundColor: theme.surface,
@@ -583,6 +603,7 @@ const DashboardPage = () => {
           marginBottom: '16px',
           overflow: 'auto',
           maxHeight: '400px',
+          display: accessDenied ? 'none' : 'block', // Hide if access is denied
         }}>
           <MotionEventList events={getEventsForDay(selectedDay)} isDarkMode={isDarkMode} />
         </div>

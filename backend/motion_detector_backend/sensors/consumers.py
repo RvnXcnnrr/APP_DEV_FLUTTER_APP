@@ -45,7 +45,7 @@ class SensorConsumer(AsyncWebsocketConsumer):
                     pass
 
                 # If it's the hardcoded device token for ESP32_001, only allow the specific owner
-                if token_key == 'd6d5f5d99bbd616cce3452ad1d02cd6ae968b20d':
+                if token_key == 'd1d5f3217b9e0ff734eb56e52bbd8f391943f39f':
                     try:
                         # Only allow oracle.tech.143@gmail.com to use this token
                         return User.objects.get(email='oracle.tech.143@gmail.com')
@@ -68,7 +68,7 @@ class SensorConsumer(AsyncWebsocketConsumer):
             self.user = await self.get_user_from_token(token_key)
 
             # If we couldn't authenticate the user and it's not the device token
-            if self.user.is_anonymous and token_key != 'd6d5f5d99bbd616cce3452ad1d02cd6ae968b20d':
+            if self.user.is_anonymous and token_key != 'd1d5f3217b9e0ff734eb56e52bbd8f391943f39f':
                 # Close the connection if authentication failed
                 await self.close(code=4003)  # 4003 is a custom code for authentication failure
                 return
@@ -142,7 +142,7 @@ class SensorConsumer(AsyncWebsocketConsumer):
 
                     # Set the token if it's not already set
                     if not device.token:
-                        device.token = 'd6d5f5d99bbd616cce3452ad1d02cd6ae968b20d'
+                        device.token = 'd1d5f3217b9e0ff734eb56e52bbd8f391943f39f'
                         device.save(update_fields=['token'])
 
                     return device
@@ -154,7 +154,7 @@ class SensorConsumer(AsyncWebsocketConsumer):
                             name=f"ESP32 Device {device_id}",
                             location="Living Room",
                             owner=self.user,
-                            token='d6d5f5d99bbd616cce3452ad1d02cd6ae968b20d'
+                            token='d1d5f3217b9e0ff734eb56e52bbd8f391943f39f'
                         )
                         return device
                     else:

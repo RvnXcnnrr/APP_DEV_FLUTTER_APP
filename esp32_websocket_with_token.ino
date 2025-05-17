@@ -32,7 +32,7 @@ const char* WIFI_PASSWORD = "Tech2025$WiFi";
 // WebSocket server settings - CHANGE THESE TO MATCH YOUR SERVER
 const char* WS_HOST = "192.168.1.9";  // Your server IP address
 const int WS_PORT = 8000;             // Your server port
-const char* WS_PATH = "/ws/sensors/?token=d6d5f5d99bbd616cce3452ad1d02cd6ae968b20d"; // WebSocket endpoint with token
+const char* WS_PATH = "/ws/sensors/?token=d1d5f3217b9e0ff734eb56e52bbd8f391943f39f"; // WebSocket endpoint with token
 const char* DEVICE_ID = "ESP32_001";  // Unique ID for this device
 
 // Sensor pins

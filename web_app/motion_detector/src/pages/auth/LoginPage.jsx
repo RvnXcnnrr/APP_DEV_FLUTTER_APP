@@ -59,7 +59,11 @@ const LoginPage = () => {
         setIsLoading(false);
 
         // Show success message
-        alert('Login successful!');
+        if (email === 'oracle.tech.143@gmail.com') {
+          alert('Login successful! You have full access to device data as the token owner.');
+        } else {
+          alert('Login successful! Note: Only oracle.tech.143@gmail.com has access to device data.');
+        }
 
         // Navigate to dashboard
         navigateReplace('/dashboard');

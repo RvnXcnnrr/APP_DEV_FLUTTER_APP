@@ -157,12 +157,22 @@ class ApiService {
    */
   async get(endpoint, requiresAuth = true) {
     const headers = await this.getHeaders(requiresAuth);
-    const response = await fetch(`${this.baseUrl}/${endpoint}`, {
-      method: 'GET',
-      headers,
-    });
 
-    return this.handleResponse(response);
+    console.debug(`GET request to: ${this.baseUrl}/${endpoint}`);
+    console.debug('Headers:', headers);
+
+    try {
+      const response = await fetch(`${this.baseUrl}/${endpoint}`, {
+        method: 'GET',
+        headers,
+      });
+
+      console.debug('Response status:', response.status);
+      return this.handleResponse(response);
+    } catch (error) {
+      console.error('Network error during GET request:', error);
+      throw error;
+    }
   }
 
   /**

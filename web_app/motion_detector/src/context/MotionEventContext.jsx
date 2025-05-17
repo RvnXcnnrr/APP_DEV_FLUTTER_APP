@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import MotionEvent from '../models/MotionEvent';
+import { useUser } from './UserContext';
 
 // Create the context
 const MotionEventContext = createContext();
@@ -11,12 +12,17 @@ const MotionEventContext = createContext();
  * @returns {JSX.Element} Provider component
  */
 export function MotionEventProvider({ children, webSocketService, apiService }) {
+  // Get user context to check if user is the token owner
+  const { isTokenOwner } = useUser();
+
   // State for events, organized by date
   const [events, setEvents] = useState({});
   // State for connection status
   const [isConnected, setIsConnected] = useState(false);
   // State for loading status
   const [isLoadingHistoricalEvents, setIsLoadingHistoricalEvents] = useState(false);
+  // State for access denied message
+  const [accessDenied, setAccessDenied] = useState(false);
 
   // Handle motion events from WebSocket
   const handleMotionEvent = useCallback((event) => {
@@ -61,6 +67,17 @@ export function MotionEventProvider({ children, webSocketService, apiService }) 
   const loadHistoricalEvents = useCallback(async (startDate, endDate) => {
     if (!apiService) return;
 
+    // Reset access denied state
+    setAccessDenied(false);
+
+    // Check if the user is the token owner (oracle.tech.143@gmail.com)
+    if (!isTokenOwner) {
+      console.error('Access denied: Only the device owner can access this data.');
+      setAccessDenied(true);
+      setIsLoadingHistoricalEvents(false);
+      return;
+    }
+
     try {
       setIsLoadingHistoricalEvents(true);
 
@@ -91,7 +108,18 @@ export function MotionEventProvider({ children, webSocketService, apiService }) 
         // Process events
         const newEvents = {};
 
-        response.forEach((eventData) => {
+        // Check if response is paginated (has 'results' property)
+        const eventsArray = response.results ? response.results : response;
+
+        // Make sure eventsArray is actually an array
+        if (!Array.isArray(eventsArray)) {
+          console.error('Expected an array of events, but got:', eventsArray);
+          return;
+        }
+
+        console.debug('Processing events array:', eventsArray);
+
+        eventsArray.forEach((eventData) => {
           try {
             // Parse the timestamp
             const timestamp = new Date(eventData.timestamp);
@@ -147,6 +175,8 @@ export function MotionEventProvider({ children, webSocketService, apiService }) 
         });
       } catch (apiError) {
         console.error('API request failed:', apiError);
+        console.error('Error message:', apiError.message);
+        console.error('Error stack:', apiError.stack);
 
         // Show a more specific error message
         if (apiError.message && (
@@ -155,6 +185,9 @@ export function MotionEventProvider({ children, webSocketService, apiService }) 
           apiError.message.includes('401')
         )) {
           console.error('Authentication failed. Please check your token or log in again.');
+        } else if (apiError.message && apiError.message.includes('forEach')) {
+          console.error('Received unexpected response format. Expected an array but got something else.');
+          console.error('This might be due to a pagination issue or API response format change.');
         }
 
         // Clear events for this date range to avoid showing stale data
@@ -194,6 +227,7 @@ export function MotionEventProvider({ children, webSocketService, apiService }) 
     events,
     isConnected,
     isLoadingHistoricalEvents,
+    accessDenied,
     getEventsForDay,
     loadHistoricalEvents,
     clearEvents,

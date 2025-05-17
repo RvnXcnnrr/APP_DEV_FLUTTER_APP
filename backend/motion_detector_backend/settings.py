@@ -1,4 +1,5 @@
 import os
+import dj_database_url
 from datetime import timedelta
 from pathlib import Path
 
@@ -52,7 +53,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'allauth.account.middleware.AccountMiddleware',  # Required for django-allauth 0.58.2+
+    # 'allauth.account.middleware.AccountMiddleware',  # Required for django-allauth 0.58.2+ (removed for compatibility)
 ]
 
 ROOT_URLCONF = 'motion_detector_backend.urls'
@@ -84,12 +85,20 @@ CHANNEL_LAYERS = {
 }
 
 # Database
+# Use SQLite for local development
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# Use PostgreSQL on Render
+if 'DATABASE_URL' in os.environ:
+    DATABASES['default'] = dict(dj_database_url.config(
+        conn_max_age=600,
+        conn_health_checks=True,
+    ))
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

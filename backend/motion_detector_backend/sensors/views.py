@@ -147,13 +147,13 @@ class MotionEventCreateView(generics.CreateAPIView):
                         'name': f"ESP32 Device {device_id}",
                         'location': "Living Room",
                         'owner': self.request.user,
-                        'token': 'd6d5f5d99bbd616cce3452ad1d02cd6ae968b20d'
+                        'token': 'd1d5f3217b9e0ff734eb56e52bbd8f391943f39f'
                     }
                 )
 
                 # If the device exists but doesn't have the token set, update it
                 if not device.token:
-                    device.token = 'd6d5f5d99bbd616cce3452ad1d02cd6ae968b20d'
+                    device.token = 'd1d5f3217b9e0ff734eb56e52bbd8f391943f39f'
                     device.save(update_fields=['token'])
 
                 # Save the motion event with the device
@@ -215,13 +215,13 @@ class SensorDataCreateView(generics.CreateAPIView):
                         'name': f"ESP32 Device {device_id}",
                         'location': "Living Room",
                         'owner': self.request.user,
-                        'token': 'd6d5f5d99bbd616cce3452ad1d02cd6ae968b20d'
+                        'token': 'd1d5f3217b9e0ff734eb56e52bbd8f391943f39f'
                     }
                 )
 
                 # If the device exists but doesn't have the token set, update it
                 if not device.token:
-                    device.token = 'd6d5f5d99bbd616cce3452ad1d02cd6ae968b20d'
+                    device.token = 'd1d5f3217b9e0ff734eb56e52bbd8f391943f39f'
                     device.save(update_fields=['token'])
 
                 # Save the sensor data with the device
