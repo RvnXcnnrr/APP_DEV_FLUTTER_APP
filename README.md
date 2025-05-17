@@ -21,7 +21,7 @@ A complete motion detection system with Flutter mobile application, Django REST 
 ### ESP32 Integration
 - **Motion Detection**: PIR sensor integration for detecting movement
 - **Temperature & Humidity**: DHT22 sensor integration
-- **Real-time Data**: Sends data to Django backend via HTTP requests
+- **Real-time Data**: Sends data to Django backend via HTTP requests and WebSockets
 
 ## Project Structure
 
@@ -57,11 +57,12 @@ A complete motion detection system with Flutter mobile application, Django REST 
 - `Django` (5.0.6): Web framework
 - `djangorestframework` (3.14.0): REST API framework
 - `django-cors-headers` (4.3.1): CORS support
-- `Pillow` (10.1.0): Image processing
+- `Pillow` (10.2.0): Image processing
 - `dj-rest-auth` (5.0.2): Authentication endpoints
 - `djangorestframework-simplejwt` (5.3.1): JWT authentication
 - `django-allauth` (0.58.2): User registration and authentication
 - `drf-yasg` (1.21.7): API documentation
+- `channels` (4.0.0): WebSocket support
 
 ### ESP32
 - `WiFi`: WiFi connectivity
@@ -129,8 +130,10 @@ The server will be available at http://192.168.1.9:8000/ (your local IP address)
 - `POST /api/auth/login/`: User login
 - `POST /api/auth/logout/`: User logout
 - `POST /api/auth/password/reset/`: Request password reset
+- `POST /api/auth/password/reset/confirm/`: Confirm password reset
 - `POST /api/auth/registration/`: User registration
 - `POST /api/auth/registration/verify-email/`: Verify email
+- `POST /api/users/resend-verification-email/`: Resend verification email
 
 ### User Profile
 - `GET /api/users/profile/`: Get user profile
@@ -140,10 +143,28 @@ The server will be available at http://192.168.1.9:8000/ (your local IP address)
 
 ### Sensors
 - `GET /api/sensors/devices/`: List user's devices
+- `POST /api/sensors/devices/`: Register a new device
+- `GET /api/sensors/devices/{id}/`: Get device details
+- `PUT /api/sensors/devices/{id}/`: Update device
+- `DELETE /api/sensors/devices/{id}/`: Delete device
+- `GET /api/sensors/devices/{id}/motion-events/`: Get motion events for a device
+- `GET /api/sensors/devices/{id}/sensor-data/`: Get sensor data for a device
+
 - `GET /api/sensors/motion-events/`: List motion events
+- `GET /api/sensors/motion-events/{id}/`: Get motion event details
+
 - `GET /api/sensors/sensor-data/`: List sensor data
+- `GET /api/sensors/sensor-data/{id}/`: Get sensor data details
+
 - `POST /api/sensors/esp32/motion-event/`: Create motion event (for ESP32)
 - `POST /api/sensors/esp32/sensor-data/`: Create sensor data (for ESP32)
+
+### WebSocket
+- `ws://[server-address]/ws/sensors/?token=[auth-token]`: WebSocket endpoint for real-time sensor data
+
+### API Documentation
+- `/swagger/`: Swagger UI for API documentation
+- `/redoc/`: ReDoc UI for API documentation
 
 ## Development Notes
 

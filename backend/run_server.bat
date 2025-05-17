@@ -14,5 +14,8 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
-echo Starting Django server...
-python manage.py runserver 0.0.0.0:8000
+echo Starting server with WebSocket support...
+daphne -b 0.0.0.0 -p 8000 motion_detector_backend.asgi:application
+
+rem Alternative: Use Django's built-in server (WebSockets won't work)
+rem python manage.py runserver 0.0.0.0:8000

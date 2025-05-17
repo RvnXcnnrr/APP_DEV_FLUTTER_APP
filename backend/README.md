@@ -23,6 +23,8 @@ Django REST Framework backend for the Motion Detector application. This backend 
   - `views.py`: Sensor-related API views
   - `urls.py`: Sensor-related URL patterns
   - `serializers.py`: JSON serializers for sensor models
+  - `consumers.py`: WebSocket consumers for real-time data
+  - `routing.py`: WebSocket URL routing
 - `templates/`: Email templates for account verification and password reset
 - `media/`: Uploaded files (profile pictures, motion event images)
 
@@ -31,11 +33,16 @@ Django REST Framework backend for the Motion Detector application. This backend 
 - `Django` (5.0.6): Web framework
 - `djangorestframework` (3.14.0): REST API framework
 - `django-cors-headers` (4.3.1): CORS support
-- `Pillow` (10.1.0): Image processing
+- `Pillow` (10.2.0): Image processing
 - `dj-rest-auth` (5.0.2): Authentication endpoints
 - `djangorestframework-simplejwt` (5.3.1): JWT authentication
 - `django-allauth` (0.58.2): User registration and authentication
 - `drf-yasg` (1.21.7): API documentation
+- `channels` (4.0.0): WebSocket support
+- `python-decouple` (3.8): Environment variable management
+- `psycopg2-binary` (2.9.9): PostgreSQL adapter
+- `gunicorn` (21.2.0): WSGI HTTP server
+- `whitenoise` (6.6.0): Static file serving
 
 ## Installation
 
@@ -62,6 +69,10 @@ Django REST Framework backend for the Motion Detector application. This backend 
 
 5. Run the server:
    ```
+   # For development with WebSocket support
+   daphne -b 0.0.0.0 -p 8000 motion_detector_backend.asgi:application
+
+   # Or using Django's built-in server (WebSockets won't work)
    python manage.py runserver 0.0.0.0:8000
    ```
 
@@ -76,8 +87,10 @@ Alternatively, you can use the provided batch files:
 - `POST /api/auth/login/`: User login
 - `POST /api/auth/logout/`: User logout
 - `POST /api/auth/password/reset/`: Request password reset
+- `POST /api/auth/password/reset/confirm/`: Confirm password reset
 - `POST /api/auth/registration/`: User registration
 - `POST /api/auth/registration/verify-email/`: Verify email
+- `POST /api/users/resend-verification-email/`: Resend verification email
 
 ### User Profile
 - `GET /api/users/profile/`: Get user profile
@@ -132,6 +145,38 @@ Before an ESP32 device can send data, it must be registered in the system. You c
 2. Using the API endpoint: `POST /api/sensors/devices/`
 3. Using the ESP32's `registerDevice()` function (requires authentication)
 
+## WebSocket Support
+
+The backend provides a WebSocket endpoint for real-time communication:
+
+- `ws://[server-address]/ws/sensors/?token=[auth-token]`: WebSocket endpoint for real-time sensor data
+
+### Authentication
+
+WebSocket connections require authentication using a token parameter in the URL:
+- JWT token from user login
+- Device token for ESP32 devices
+- The hardcoded token `d6d5f5d99bbd616cce3452ad1d02cd6ae968b20d` for the ESP32_001 device
+
+### Message Format
+
+The WebSocket sends and receives JSON messages with the following format:
+
+```json
+{
+  "type": "motion_event",
+  "device_id": "ESP32_001",
+  "timestamp": "2025-05-16T12:34:56",
+  "temperature": 25.5,
+  "humidity": 60.2
+}
+```
+
+Message types:
+- `motion_event`: Sent when motion is detected
+- `sensor_data`: Sent for regular sensor readings
+- `sensor_data_received`: Confirmation message
+
 ## Documentation
 
 API documentation is available at:
@@ -141,6 +186,9 @@ API documentation is available at:
 ## Development Notes
 
 - The backend uses JWT authentication
-- ESP32 endpoints (`/api/sensors/esp32/...`) allow anonymous access
-- Other endpoints require authentication
+- ESP32 endpoints (`/api/sensors/esp32/...`) require device token authentication
+- Other endpoints require user authentication
 - Image uploads are stored in the `media/` directory
+- WebSocket connections require token authentication
+- The server should be run using Daphne for WebSocket support
+- The backend uses Philippine Time (PHT, UTC+8) for timestamps

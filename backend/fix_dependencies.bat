@@ -28,6 +28,8 @@ pip install psycopg2-binary==2.9.9
 pip install gunicorn==21.2.0
 pip install whitenoise==6.6.0
 pip install drf-yasg==1.21.7
+pip install channels==4.0.0
+pip install daphne==4.0.0
 
 echo Installation complete!
 echo You can now run the server with: .\run_server.bat
