@@ -9,6 +9,9 @@ echo "Directory contents: $(ls -la)"
 # Install dependencies using Poetry from the root directory
 poetry install
 
+# Ensure the correct version of django-allauth is installed
+pip install django-allauth==0.58.2
+
 # Change to the backend directory
 cd backend
 
