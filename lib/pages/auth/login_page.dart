@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:appdev_md/widgets/auth_button.dart';
 import 'package:appdev_md/widgets/auth_text_field.dart';
 import 'package:appdev_md/providers/user_provider.dart';
+import 'package:appdev_md/providers/motion_event_provider.dart';
+import 'package:appdev_md/utils/logger.dart';
 import 'package:appdev_md/main.dart';
 
 class LoginPage extends StatefulWidget {
@@ -52,6 +54,25 @@ class _LoginPageState extends State<LoginPage> {
 
         // Set user in provider
         userProvider.setUser(user);
+
+        // Get motion event provider and fetch historical events
+        if (mounted) {
+          try {
+            final motionEventProvider = Provider.of<MotionEventProvider>(context, listen: false);
+
+            // Clear any existing events first
+            motionEventProvider.clearEvents();
+
+            // Fetch historical motion events
+            Logger.info('Fetching historical motion events after login');
+            await motionEventProvider.fetchHistoricalEvents();
+
+            Logger.info('Successfully fetched historical motion events after login');
+          } catch (e) {
+            Logger.error('Error fetching historical motion events after login: $e');
+            // Continue with login process even if fetching events fails
+          }
+        }
 
         if (mounted) {
           // Show success message

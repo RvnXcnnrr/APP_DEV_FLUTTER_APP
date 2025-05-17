@@ -65,6 +65,7 @@ void main() async {
   // Create motion event provider
   final motionEventProvider = MotionEventProvider(
     webSocketService: webSocketService,
+    apiService: apiService,
   );
 
   // Create sensor data provider

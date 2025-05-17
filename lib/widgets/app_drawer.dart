@@ -2,12 +2,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:appdev_md/providers/user_provider.dart';
+import 'package:appdev_md/providers/motion_event_provider.dart';
 import 'package:appdev_md/pages/profile_page.dart';
 import 'package:appdev_md/pages/settings_page.dart';
 import 'package:appdev_md/utils/navigation_helper.dart';
+import 'package:appdev_md/utils/logger.dart';
 import 'package:appdev_md/services/api_service.dart';
 import 'package:appdev_md/services/auth_service.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:appdev_md/main.dart';
 
 /// A drawer widget that displays user information and navigation options
 class AppDrawer extends StatelessWidget {
@@ -15,7 +18,11 @@ class AppDrawer extends StatelessWidget {
 
   /// Performs the logout operation
   void _performLogout(BuildContext context, UserProvider userProvider) {
-    // Clear the user data first to ensure UI updates
+    // Clear the motion events
+    final motionEventProvider = Provider.of<MotionEventProvider>(context, listen: false);
+    motionEventProvider.clearEvents();
+
+    // Clear the user data to ensure UI updates
     userProvider.clearUser();
 
     // Navigate to login page
@@ -28,14 +35,14 @@ class AppDrawer extends StatelessWidget {
   /// Logs out from the server
   Future<void> _logoutFromServer() async {
     try {
-      // Create API service
-      final apiService = ApiService(baseUrl: 'http://localhost:8000');
-      final authService = AuthService(apiService: apiService);
-
-      // Logout
+      // Use the global API service from main.dart
+      // This ensures we're using the same instance that has the correct token
       await authService.logout();
+
+      Logger.info('Successfully logged out from server');
     } catch (e) {
-      // Ignore errors during logout
+      // Log the error but continue with the logout process
+      Logger.error('Error during server logout: $e');
     }
   }
 
