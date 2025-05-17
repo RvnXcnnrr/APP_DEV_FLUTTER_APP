@@ -33,11 +33,32 @@ void logApiConfig() {
   Logger.debug('Using WebSocket service: $webSocketService');
 }
 
+// Test connection to the backend
+Future<bool> testBackendConnection() async {
+  try {
+    Logger.info('Testing connection to backend at: ${AppConfig.apiBaseUrl}');
+
+    // Try to access a simple endpoint that doesn't require authentication
+    final response = await apiService.get('api/auth/user/', requiresAuth: false);
+
+    Logger.info('Backend connection test response: $response');
+    Logger.info('Backend connection test successful!');
+
+    return true;
+  } catch (e) {
+    Logger.error('Backend connection test failed', e);
+    return false;
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Log API configuration for debugging
   logApiConfig();
+
+  // Test connection to the backend
+  await testBackendConnection();
 
   // Create user provider
   final userProvider = UserProvider();

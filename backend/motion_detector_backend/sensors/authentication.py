@@ -47,7 +47,7 @@ class DeviceTokenAuthentication(authentication.BaseAuthentication):
         Validate the provided token against the device's stored token.
         """
         # Special case for ESP32_001
-        if token == 'fe1f6c58646d8942c85cb5fc456990d4a639c1a0':
+        if token == '54836780fc03bcdff737d0eadbe16156f461342f':
             try:
                 # Get the owner with the specific email
                 owner = User.objects.get(email='oracle.tech.143@gmail.com')

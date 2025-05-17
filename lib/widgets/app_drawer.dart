@@ -11,6 +11,7 @@ import 'package:appdev_md/services/api_service.dart';
 import 'package:appdev_md/services/auth_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:appdev_md/main.dart';
+import 'package:appdev_md/utils/config.dart';
 
 /// A drawer widget that displays user information and navigation options
 class AppDrawer extends StatelessWidget {
@@ -208,8 +209,8 @@ class AppDrawer extends StatelessWidget {
       final pickedFile = await picker.pickImage(source: source);
 
       if (pickedFile != null) {
-        // Create API service
-        final apiService = ApiService(baseUrl: 'http://localhost:8000');
+        // Create API service using the base URL from config
+        final apiService = ApiService(baseUrl: AppConfig.apiBaseUrl);
         final authService = AuthService(apiService: apiService);
 
         // Get the current user

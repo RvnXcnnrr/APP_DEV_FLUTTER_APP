@@ -4,6 +4,7 @@ import 'package:appdev_md/models/motion_event.dart';
 import 'package:appdev_md/services/websocket_service.dart';
 import 'package:appdev_md/services/api_service.dart';
 import 'package:appdev_md/utils/logger.dart';
+import 'package:appdev_md/utils/config.dart';
 
 /// Provider for motion events
 class MotionEventProvider extends ChangeNotifier {
@@ -39,7 +40,7 @@ class MotionEventProvider extends ChangeNotifier {
     required WebSocketService webSocketService,
     ApiService? apiService,
   }) : _webSocketService = webSocketService,
-       _apiService = apiService ?? ApiService(baseUrl: 'http://localhost:8000') {
+       _apiService = apiService ?? ApiService(baseUrl: AppConfig.apiBaseUrl) {
     // Subscribe to motion events
     _motionEventSubscription = _webSocketService.motionEvents.listen(_handleMotionEvent);
 

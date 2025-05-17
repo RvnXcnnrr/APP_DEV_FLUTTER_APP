@@ -3,6 +3,7 @@ import 'package:appdev_md/widgets/auth_text_field.dart';
 import 'package:appdev_md/widgets/auth_button.dart';
 import 'package:appdev_md/services/api_service.dart';
 import 'package:appdev_md/services/auth_service.dart';
+import 'package:appdev_md/utils/config.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -31,8 +32,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       });
 
       try {
-        // Create API service - use 10.0.2.2 instead of localhost for Android emulators
-        final apiService = ApiService(baseUrl: 'http://10.0.2.2:8000');
+        // Create API service using the base URL from config
+        final apiService = ApiService(baseUrl: AppConfig.apiBaseUrl);
         final authService = AuthService(apiService: apiService);
 
         // Send password reset email

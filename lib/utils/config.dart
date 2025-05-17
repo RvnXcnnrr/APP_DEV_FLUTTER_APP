@@ -2,8 +2,16 @@ import 'package:flutter/foundation.dart';
 
 /// Configuration for the application
 class AppConfig {
+  /// Flag to force production mode for testing
+  static bool forceProductionMode = true;
+
   // Automatically detect environment based on platform
   static Environment get currentEnvironment {
+    // If production mode is forced, return production environment
+    if (forceProductionMode) {
+      return Environment.production;
+    }
+
     // Check if we're in production mode
     const bool isProduction = bool.fromEnvironment('dart.vm.product');
 
@@ -38,7 +46,7 @@ class AppConfig {
   /// WebSocket configuration
   static String get wsBaseUrl {
     // Token for device authentication
-    const token = 'fe1f6c58646d8942c85cb5fc456990d4a639c1a0';
+    const token = '54836780fc03bcdff737d0eadbe16156f461342f';
 
     // Use the same environment detection as apiBaseUrl
     switch (currentEnvironment) {

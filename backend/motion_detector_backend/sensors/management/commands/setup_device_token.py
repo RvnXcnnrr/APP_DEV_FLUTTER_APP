@@ -23,7 +23,7 @@ class Command(BaseCommand):
                 'name': 'ESP32 Device ESP32_001',
                 'location': 'Living Room',
                 'owner': owner,
-                'token': 'fe1f6c58646d8942c85cb5fc456990d4a639c1a0'
+                'token': '54836780fc03bcdff737d0eadbe16156f461342f'
             }
         )
 
@@ -32,7 +32,7 @@ class Command(BaseCommand):
         else:
             # If the device exists but doesn't have the token set, update it
             if not device.token:
-                device.token = 'fe1f6c58646d8942c85cb5fc456990d4a639c1a0'
+                device.token = '54836780fc03bcdff737d0eadbe16156f461342f'
                 device.save(update_fields=['token'])
                 self.stdout.write(self.style.SUCCESS(f'Updated device with token: {device}'))
             else:

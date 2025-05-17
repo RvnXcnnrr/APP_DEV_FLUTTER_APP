@@ -3,6 +3,7 @@ import 'package:appdev_md/widgets/auth_text_field.dart';
 import 'package:appdev_md/widgets/auth_button.dart';
 import 'package:appdev_md/services/api_service.dart';
 import 'package:appdev_md/utils/logger.dart';
+import 'package:appdev_md/utils/config.dart';
 
 class ResetPasswordConfirmPage extends StatefulWidget {
   final String uid;
@@ -33,8 +34,8 @@ class _ResetPasswordConfirmPageState extends State<ResetPasswordConfirmPage> {
   @override
   void initState() {
     super.initState();
-    // Initialize services
-    _apiService = ApiService(baseUrl: 'http://10.0.2.2:8000');
+    // Initialize services with the base URL from config
+    _apiService = ApiService(baseUrl: AppConfig.apiBaseUrl);
 
     // Log the received token and UID for debugging
     Logger.debug('Reset password page initialized with UID: ${widget.uid}, Token: ${widget.token}');
