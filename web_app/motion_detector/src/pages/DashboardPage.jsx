@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
+import { startOfMonth, endOfMonth, getDaysInMonth } from 'date-fns';
 import { useUser } from '../context/UserContext';
+import { useMotionEvents } from '../context/MotionEventContext';
 import { getTheme } from '../utils/theme';
 import MotionEventList from '../components/MotionEventList';
 import AppDrawer from '../components/AppDrawer';
-import MotionEvent from '../models/MotionEvent';
-import { FaBars } from 'react-icons/fa';
+import {
+  FaBars,
+  FaChevronLeft,
+  FaChevronRight,
+  FaAngleDoubleLeft,
+  FaAngleDoubleRight,
+  FaChevronDown
+} from 'react-icons/fa';
 
 /**
  * Dashboard page component
@@ -14,50 +21,275 @@ import { FaBars } from 'react-icons/fa';
 const DashboardPage = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState(new Date());
-  const [events, setEvents] = useState([]);
+  const [focusedDay, setFocusedDay] = useState(new Date());
+  const [showYearPicker, setShowYearPicker] = useState(false);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
 
   const { isDarkMode } = useUser();
+  const { getEventsForDay, loadHistoricalEvents, isConnected: eventsConnected } = useMotionEvents();
   const theme = getTheme(isDarkMode);
 
-  // Generate mock events
+  // Load historical events for the current month when the component mounts or the selected day changes
   useEffect(() => {
-    const generateMockEvents = () => {
-      const mockEvents = [];
-      const today = new Date();
-
-      // Generate 5 random events for today
-      for (let i = 0; i < 5; i++) {
-        const eventDate = new Date(today);
-        eventDate.setHours(Math.floor(Math.random() * 24));
-        eventDate.setMinutes(Math.floor(Math.random() * 60));
-
-        mockEvents.push(
-          new MotionEvent(
-            `event-${i}`,
-            eventDate,
-            `device-${Math.floor(Math.random() * 3) + 1}`,
-            20 + Math.random() * 10, // Temperature between 20-30°C
-            40 + Math.random() * 40, // Humidity between 40-80%
-            'https://via.placeholder.com/150' // Placeholder image
-          )
-        );
-      }
-
-      return mockEvents;
-    };
-
-    setEvents(generateMockEvents());
-  }, [selectedDay]);
+    const start = startOfMonth(focusedDay);
+    const end = endOfMonth(focusedDay);
+    loadHistoricalEvents(start, end);
+  }, [focusedDay, loadHistoricalEvents]);
 
   // Toggle drawer
   const toggleDrawer = () => {
     setIsDrawerOpen(!isDrawerOpen);
   };
 
-  // Get events for selected day
-  const getEventsForDay = (date) => {
-    return events.filter(
-      (event) => format(event.timestamp, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+  // Show year picker
+  const showYearPickerDialog = () => {
+    setShowYearPicker(true);
+  };
+
+  // Show month picker
+  const showMonthPickerDialog = () => {
+    setShowMonthPicker(true);
+  };
+
+  // Get month name
+  const getMonthName = (month) => {
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return monthNames[month - 1];
+  };
+
+  // Check if two dates are the same day
+  const isSameDay = (a, b) => {
+    return a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate();
+  };
+
+  // Generate calendar days
+  const generateCalendarDays = () => {
+    const daysInMonth = getDaysInMonth(focusedDay);
+    const firstDayOfMonth = new Date(focusedDay.getFullYear(), focusedDay.getMonth(), 1);
+    const firstWeekday = firstDayOfMonth.getDay() || 7; // Convert Sunday (0) to 7 for easier calculation
+    const adjustedFirstWeekday = firstWeekday === 7 ? 0 : firstWeekday; // Adjust for Sunday
+
+    const days = [];
+
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < adjustedFirstWeekday; i++) {
+      days.push(null);
+    }
+
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(focusedDay.getFullYear(), focusedDay.getMonth(), day));
+    }
+
+    // Add empty cells to complete the grid (6 rows x 7 columns = 42 cells)
+    while (days.length < 42) {
+      days.push(null);
+    }
+
+    return days;
+  };
+
+  // Year picker dialog
+  const renderYearPicker = () => {
+    if (!showYearPicker) return null;
+
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 30 }, (_, i) => currentYear - 10 + i);
+
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+      }}>
+        <div style={{
+          backgroundColor: theme.surface,
+          borderRadius: '16px',
+          width: '300px',
+          maxHeight: '80vh',
+          overflow: 'hidden',
+          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+        }}>
+          <div style={{
+            padding: '16px',
+            borderBottom: `1px solid ${theme.divider}`,
+            textAlign: 'center',
+          }}>
+            <h3 style={{
+              margin: 0,
+              color: theme.primary,
+              fontSize: '18px',
+              fontWeight: 'bold',
+            }}>Select Year</h3>
+          </div>
+
+          <div style={{
+            height: '300px',
+            overflowY: 'auto',
+          }}>
+            {years.map(year => (
+              <div
+                key={year}
+                style={{
+                  padding: '12px',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  backgroundColor: year === focusedDay.getFullYear() ? `${theme.primary}20` : 'transparent',
+                  color: year === focusedDay.getFullYear() ? theme.primary : theme.text,
+                  fontWeight: year === focusedDay.getFullYear() ? 'bold' : 'normal',
+                }}
+                onClick={() => {
+                  const newDate = new Date(focusedDay);
+                  newDate.setFullYear(year);
+                  setFocusedDay(newDate);
+                  if (selectedDay.getMonth() !== newDate.getMonth() || selectedDay.getFullYear() !== newDate.getFullYear()) {
+                    setSelectedDay(new Date(newDate));
+                  }
+                  setShowYearPicker(false);
+                }}
+              >
+                {year}
+              </div>
+            ))}
+          </div>
+
+          <div style={{
+            padding: '8px',
+            borderTop: `1px solid ${theme.divider}`,
+            textAlign: 'center',
+          }}>
+            <button
+              style={{
+                padding: '8px 16px',
+                backgroundColor: 'transparent',
+                color: theme.primary,
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+              onClick={() => setShowYearPicker(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Month picker dialog
+  const renderMonthPicker = () => {
+    if (!showMonthPicker) return null;
+
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+      }}>
+        <div style={{
+          backgroundColor: theme.surface,
+          borderRadius: '16px',
+          width: '300px',
+          maxHeight: '80vh',
+          overflow: 'hidden',
+          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+        }}>
+          <div style={{
+            padding: '16px',
+            borderBottom: `1px solid ${theme.divider}`,
+            textAlign: 'center',
+          }}>
+            <h3 style={{
+              margin: 0,
+              color: theme.primary,
+              fontSize: '18px',
+              fontWeight: 'bold',
+            }}>Select Month</h3>
+          </div>
+
+          <div style={{
+            height: '300px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '8px',
+            padding: '16px',
+          }}>
+            {monthNames.map((month, index) => (
+              <div
+                key={month}
+                style={{
+                  padding: '12px 8px',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  backgroundColor: index === focusedDay.getMonth() ? `${theme.primary}20` : 'transparent',
+                  color: index === focusedDay.getMonth() ? theme.primary : theme.text,
+                  fontWeight: index === focusedDay.getMonth() ? 'bold' : 'normal',
+                  border: index === focusedDay.getMonth() ? `1px solid ${theme.primary}` : 'none',
+                  borderRadius: '8px',
+                }}
+                onClick={() => {
+                  const newDate = new Date(focusedDay);
+                  newDate.setMonth(index);
+                  setFocusedDay(newDate);
+                  if (selectedDay.getMonth() !== newDate.getMonth() || selectedDay.getFullYear() !== newDate.getFullYear()) {
+                    setSelectedDay(new Date(newDate));
+                  }
+                  setShowMonthPicker(false);
+                }}
+              >
+                {month}
+              </div>
+            ))}
+          </div>
+
+          <div style={{
+            padding: '8px',
+            borderTop: `1px solid ${theme.divider}`,
+            textAlign: 'center',
+          }}>
+            <button
+              style={{
+                padding: '8px 16px',
+                backgroundColor: 'transparent',
+                color: theme.primary,
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+              onClick={() => setShowMonthPicker(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
     );
   };
 
@@ -99,74 +331,281 @@ const DashboardPage = () => {
         <h1 style={{ margin: 0, fontSize: '20px' }}>Motion Dashboard</h1>
       </div>
 
-      {/* Calendar (simplified) */}
-      <div
-        style={{
-          padding: '15px',
+      {/* Calendar Card */}
+      <div style={{ padding: '16px' }}>
+        <div style={{
           backgroundColor: theme.surface,
-          marginTop: '10px',
-          marginBottom: '10px',
+          borderRadius: '12px',
           boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-        }}
-      >
-        <h2 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>
-          {format(selectedDay, 'MMMM yyyy')}
-        </h2>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <button
-            onClick={() => {
-              const prevMonth = new Date(selectedDay);
-              prevMonth.setMonth(prevMonth.getMonth() - 1);
-              setSelectedDay(prevMonth);
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: theme.primary,
-              fontSize: '16px',
-            }}
-          >
-            Previous
-          </button>
-          <div>{format(selectedDay, 'EEEE, MMMM d, yyyy')}</div>
-          <button
-            onClick={() => {
-              const nextMonth = new Date(selectedDay);
-              nextMonth.setMonth(nextMonth.getMonth() + 1);
-              setSelectedDay(nextMonth);
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: theme.primary,
-              fontSize: '16px',
-            }}
-          >
-            Next
-          </button>
+          padding: '16px',
+          marginBottom: '16px',
+        }}>
+          {/* Calendar header with year and month navigation */}
+          <div style={{
+            backgroundColor: `${theme.primary}1A`, // ~10% opacity
+            borderRadius: '8px',
+            padding: '8px',
+          }}>
+            {/* Year navigation */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '8px',
+            }}>
+              <button
+                onClick={() => {
+                  const newDate = new Date(focusedDay);
+                  newDate.setFullYear(newDate.getFullYear() - 1);
+                  setFocusedDay(newDate);
+                  if (selectedDay.getMonth() !== newDate.getMonth() || selectedDay.getFullYear() !== newDate.getFullYear()) {
+                    setSelectedDay(new Date(newDate));
+                  }
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: theme.primary,
+                }}
+              >
+                <FaAngleDoubleLeft size={20} />
+              </button>
+
+              <div
+                onClick={showYearPickerDialog}
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: '20px',
+                  padding: '4px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                }}
+              >
+                <span style={{
+                  fontWeight: 'bold',
+                  color: theme.primary,
+                  fontSize: '16px',
+                }}>
+                  {focusedDay.getFullYear()}
+                </span>
+                <FaChevronDown size={12} color={theme.primary} style={{ marginLeft: '4px' }} />
+              </div>
+
+              <button
+                onClick={() => {
+                  const newDate = new Date(focusedDay);
+                  newDate.setFullYear(newDate.getFullYear() + 1);
+                  setFocusedDay(newDate);
+                  if (selectedDay.getMonth() !== newDate.getMonth() || selectedDay.getFullYear() !== newDate.getFullYear()) {
+                    setSelectedDay(new Date(newDate));
+                  }
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: theme.primary,
+                }}
+              >
+                <FaAngleDoubleRight size={20} />
+              </button>
+            </div>
+
+            {/* Month navigation */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <button
+                onClick={() => {
+                  const newDate = new Date(focusedDay);
+                  newDate.setMonth(newDate.getMonth() - 1);
+                  setFocusedDay(newDate);
+                  if (selectedDay.getMonth() !== newDate.getMonth() || selectedDay.getFullYear() !== newDate.getFullYear()) {
+                    setSelectedDay(new Date(newDate));
+                  }
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: theme.primary,
+                }}
+              >
+                <FaChevronLeft size={16} />
+              </button>
+
+              <div
+                onClick={showMonthPickerDialog}
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: '20px',
+                  padding: '4px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                }}
+              >
+                <span style={{
+                  fontWeight: 'bold',
+                  color: theme.primary,
+                  fontSize: '16px',
+                }}>
+                  {getMonthName(focusedDay.getMonth() + 1)}
+                </span>
+                <FaChevronDown size={12} color={theme.primary} style={{ marginLeft: '4px' }} />
+              </div>
+
+              <button
+                onClick={() => {
+                  const newDate = new Date(focusedDay);
+                  newDate.setMonth(newDate.getMonth() + 1);
+                  setFocusedDay(newDate);
+                  if (selectedDay.getMonth() !== newDate.getMonth() || selectedDay.getFullYear() !== newDate.getFullYear()) {
+                    setSelectedDay(new Date(newDate));
+                  }
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: theme.primary,
+                }}
+              >
+                <FaChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '16px' }}>
+            {/* Weekday headers */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(7, 1fr)',
+              marginBottom: '8px',
+            }}>
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                <div key={day} style={{
+                  textAlign: 'center',
+                  fontWeight: 'bold',
+                  color: theme.primary,
+                  padding: '8px 0',
+                }}>
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar grid */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(7, 1fr)',
+              gap: '2px',
+            }}>
+              {generateCalendarDays().map((day, index) => {
+                if (!day) return <div key={`empty-${index}`} />;
+
+                const isSelected = isSameDay(day, selectedDay);
+                const hasEvents = getEventsForDay(day).length > 0;
+
+                return (
+                  <div
+                    key={`day-${index}`}
+                    onClick={() => setSelectedDay(day)}
+                    style={{
+                      margin: '2px',
+                      aspectRatio: '1',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      borderRadius: '8px',
+                      backgroundColor: isSelected ? theme.primary : 'transparent',
+                      border: hasEvents ? `1.5px solid ${theme.primary}80` : 'none', // 50% opacity
+                    }}
+                  >
+                    <span style={{
+                      color: isSelected ? 'white' : theme.text,
+                      fontWeight: isSelected ? 'bold' : 'normal',
+                      fontSize: '16px',
+                    }}>
+                      {day.getDate()}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Event list */}
+      {/* Events section */}
+      <div style={{ padding: '0 16px' }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '8px',
+          padding: '0 8px',
+        }}>
+          <h2 style={{
+            margin: 0,
+            fontSize: '18px',
+            fontWeight: 'bold',
+            color: theme.primary,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
+            Events on {selectedDay.getDate()} {getMonthName(selectedDay.getMonth() + 1)} {selectedDay.getFullYear()}
+          </h2>
+
+          <div style={{
+            backgroundColor: `${theme.primary}1A`, // ~10% opacity
+            borderRadius: '16px',
+            padding: '4px 8px',
+            fontSize: '12px',
+          }}>
+            {getEventsForDay(selectedDay).length} events
+          </div>
+        </div>
+
+        {/* Event list */}
+        <div style={{
+          backgroundColor: theme.surface,
+          borderRadius: '8px',
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+          marginBottom: '16px',
+          overflow: 'auto',
+          maxHeight: '400px',
+        }}>
+          <MotionEventList events={getEventsForDay(selectedDay)} isDarkMode={isDarkMode} />
+        </div>
+      </div>
+
+      {/* Connection status */}
       <div
         style={{
-          flex: 1,
+          padding: '10px',
           backgroundColor: theme.surface,
-          marginTop: '10px',
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-          overflow: 'auto',
+          borderTop: `1px solid ${theme.divider}`,
+          fontSize: '12px',
+          color: theme.textSecondary,
+          textAlign: 'center',
+          marginTop: 'auto',
         }}
       >
-        <MotionEventList events={getEventsForDay(selectedDay)} isDarkMode={isDarkMode} />
+        WebSocket Status: {eventsConnected ? 'Connected' : 'Disconnected'}
       </div>
+
+      {/* Render dialogs */}
+      {renderYearPicker()}
+      {renderMonthPicker()}
     </div>
   );
 };
