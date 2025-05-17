@@ -37,14 +37,33 @@ const webSocketService = new WebSocketService(AppConfig.wsBaseUrl, apiService);
 
 // Always use the same token as the Flutter app
 // This ensures both apps can access the same data
-console.log('Setting token from Flutter app configuration');
-// Use the default token from config which matches the Flutter app's token
-apiService.setToken(AppConfig.defaultToken);
-console.log('Using token:', AppConfig.defaultToken);
+console.log('Setting token from app configuration');
+
+// Check if we already have a token in localStorage
+const existingToken = localStorage.getItem('auth_token');
+if (!existingToken) {
+  // Use the default token from config which matches the Flutter app's token
+  apiService.setToken(AppConfig.defaultToken);
+  console.log('Using default token from config:', AppConfig.defaultToken);
+} else {
+  console.log('Using existing token from localStorage:', existingToken);
+}
 
 // Log the current token for debugging
 console.log('Current token in localStorage:', apiService.getToken());
 console.log('Authorization header will be:', `Token ${apiService.getToken()}`);
+
+// Verify the token is the expected one for the device owner
+const expectedToken = 'fe1f6c58646d8942c85cb5fc456990d4a639c1a0';
+if (apiService.getToken() !== expectedToken) {
+  console.warn('Warning: Current token does not match the expected token for the device owner!');
+  console.warn('Expected:', expectedToken);
+  console.warn('Current:', apiService.getToken());
+
+  // Force set the correct token
+  apiService.setToken(expectedToken);
+  console.log('Token has been reset to the expected value:', apiService.getToken());
+}
 
 // App component
 const App = () => {

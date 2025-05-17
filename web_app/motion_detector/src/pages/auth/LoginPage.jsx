@@ -50,23 +50,37 @@ const LoginPage = () => {
       // For development purposes, allow login without credentials
       // In a real app, you would validate credentials against a backend
       setTimeout(() => {
-        // Create a user with the entered email
-        const user = new User('Dev', 'User', email);
+        try {
+          // Create a user with the entered email
+          // The email will be normalized in the UserContext
+          const user = new User('Dev', 'User', email);
 
-        // Set the user in the context
-        login(user);
+          console.log('LoginPage - Created user:', user);
+          console.log('LoginPage - User email:', user.email);
 
-        setIsLoading(false);
+          // Set the user in the context
+          login(user);
 
-        // Show success message
-        if (email === 'oracle.tech.143@gmail.com') {
-          alert('Login successful! You have full access to device data as the token owner.');
-        } else {
-          alert('Login successful! Note: Only oracle.tech.143@gmail.com has access to device data.');
+          console.log('LoginPage - After login, user email:', email);
+
+          // Check if the user is the token owner
+          const isOwner = email.trim().toLowerCase() === 'oracle.tech.143@gmail.com';
+
+          // Show success message
+          if (isOwner) {
+            alert('Login successful! You have full access to device data as the token owner.');
+          } else {
+            alert('Login successful! Note: Only oracle.tech.143@gmail.com has access to device data.');
+          }
+
+          // Navigate to dashboard
+          navigateReplace('/dashboard');
+        } catch (error) {
+          console.error('Error during login:', error);
+          alert('An error occurred during login. Please try again.');
+        } finally {
+          setIsLoading(false);
         }
-
-        // Navigate to dashboard
-        navigateReplace('/dashboard');
       }, 1000);
     }
   };

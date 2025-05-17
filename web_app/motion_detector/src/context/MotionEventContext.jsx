@@ -6,6 +6,9 @@ import { useUser } from './UserContext';
 // Create the context
 const MotionEventContext = createContext();
 
+// Token owner email constant
+const TOKEN_OWNER_EMAIL = 'oracle.tech.143@gmail.com';
+
 /**
  * Provider component for motion events
  * @param {Object} props - Component props
@@ -13,7 +16,8 @@ const MotionEventContext = createContext();
  */
 export function MotionEventProvider({ children, webSocketService, apiService }) {
   // Get user context to check if user is the token owner
-  const { isTokenOwner } = useUser();
+  const userContext = useUser();
+  const { user } = userContext;
 
   // State for events, organized by date
   const [events, setEvents] = useState({});
@@ -23,6 +27,25 @@ export function MotionEventProvider({ children, webSocketService, apiService }) 
   const [isLoadingHistoricalEvents, setIsLoadingHistoricalEvents] = useState(false);
   // State for access denied message
   const [accessDenied, setAccessDenied] = useState(false);
+
+  // Log user information when the component mounts or changes
+  useEffect(() => {
+    console.log('MotionEventProvider - User:', user);
+    console.log('MotionEventProvider - User email:', user?.email);
+
+    // Check if the user is the token owner
+    const isOwner = checkIsTokenOwner(user?.email);
+    console.log('MotionEventProvider - isTokenOwner:', isOwner);
+  }, [user]);
+
+  // Helper function to check if a user is the token owner
+  const checkIsTokenOwner = useCallback((email) => {
+    if (!email) return false;
+
+    // Normalize the email for comparison (lowercase and trim)
+    const normalizedEmail = email.trim().toLowerCase();
+    return normalizedEmail === TOKEN_OWNER_EMAIL.toLowerCase();
+  }, []);
 
   // Handle motion events from WebSocket
   const handleMotionEvent = useCallback((event) => {
@@ -70,8 +93,12 @@ export function MotionEventProvider({ children, webSocketService, apiService }) 
     // Reset access denied state
     setAccessDenied(false);
 
-    // Check if the user is the token owner (oracle.tech.143@gmail.com)
-    if (!isTokenOwner) {
+    // Check if the user is the token owner
+    const isOwner = checkIsTokenOwner(user?.email);
+    console.log('loadHistoricalEvents - User email:', user?.email);
+    console.log('loadHistoricalEvents - isTokenOwner:', isOwner);
+
+    if (!isOwner) {
       console.error('Access denied: Only the device owner can access this data.');
       setAccessDenied(true);
       setIsLoadingHistoricalEvents(false);
@@ -209,7 +236,7 @@ export function MotionEventProvider({ children, webSocketService, apiService }) 
     } finally {
       setIsLoadingHistoricalEvents(false);
     }
-  }, [apiService]);
+  }, [apiService, user, checkIsTokenOwner]);
 
   // Get events for a specific day
   const getEventsForDay = useCallback((date) => {
@@ -231,6 +258,8 @@ export function MotionEventProvider({ children, webSocketService, apiService }) 
     getEventsForDay,
     loadHistoricalEvents,
     clearEvents,
+    // Add a direct method to check if a user is the token owner
+    isTokenOwner: checkIsTokenOwner(user?.email)
   };
 
   return <MotionEventContext.Provider value={value}>{children}</MotionEventContext.Provider>;
