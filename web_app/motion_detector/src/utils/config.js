@@ -21,8 +21,8 @@ const config = {
   },
   // Production environment
   production: {
-    apiBaseUrl: 'https://your-render-app-name.onrender.com',
-    wsBaseUrl: 'wss://your-render-app-name.onrender.com/ws/sensors/',
+    apiBaseUrl: 'https://app-dev-flutter-app.onrender.com',
+    wsBaseUrl: 'wss://app-dev-flutter-app.onrender.com/ws/sensors/',
     // This token matches the one used in the Flutter app (lib/utils/config.dart)
     // and the ESP32 device (esp32_websocket_with_token.ino)
     defaultToken: 'fe1f6c58646d8942c85cb5fc456990d4a639c1a0',

@@ -172,6 +172,13 @@ SIMPLE_JWT = {
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
 
+# If you want to restrict CORS to specific origins in production, use this instead:
+# CORS_ALLOWED_ORIGINS = [
+#     "https://app-dev-flutter-app.onrender.com",
+#     "http://localhost:3000",
+#     "http://127.0.0.1:3000",
+# ]
+
 # Django AllAuth settings
 SITE_ID = 1
 # Use environment variable for SITE_DOMAIN in production

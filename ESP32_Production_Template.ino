@@ -10,7 +10,7 @@ const char* WIFI_SSID = "YourWiFiSSID";
 const char* WIFI_PASSWORD = "YourWiFiPassword";
 
 // WebSocket server settings - PRODUCTION SETTINGS
-const char* WS_HOST = "your-render-app-name.onrender.com";  // Your Render app domain
+const char* WS_HOST = "app-dev-flutter-app.onrender.com";  // Your Render app domain
 const int WS_PORT = 443;             // Use 443 for secure WebSocket (WSS)
 const char* WS_PATH = "/ws/sensors/?token=fe1f6c58646d8942c85cb5fc456990d4a639c1a0"; // WebSocket endpoint with token
 const char* DEVICE_ID = "ESP32_001";  // Unique ID for this device
@@ -38,14 +38,14 @@ void setup() {
   // Initialize serial communication
   Serial.begin(115200);
   Serial.println("\nESP32 Motion & Temperature Sensor with WebSocket");
-  
+
   // Initialize sensors
   pinMode(PIR_PIN, INPUT);
   dht.begin();
-  
+
   // Connect to WiFi
   setupWiFi();
-  
+
   // Connect to WebSocket server
   setupWebSocket();
 }
@@ -54,10 +54,10 @@ void setup() {
 void loop() {
   // Handle WebSocket events
   webSocket.loop();
-  
+
   // Check for motion
   checkMotion();
-  
+
   // Read sensor data periodically
   readSensorData();
 }
@@ -65,15 +65,15 @@ void loop() {
 // ===== WIFI FUNCTIONS =====
 void setupWiFi() {
   Serial.printf("Connecting to WiFi: %s\n", WIFI_SSID);
-  
+
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  
+
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-  
+
   Serial.println();
   Serial.printf("WiFi connected. IP address: %s\n", WiFi.localIP().toString().c_str());
 }
@@ -101,22 +101,22 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
       Serial.println("WebSocket disconnected");
       isConnected = false;
       break;
-    
+
     case WStype_CONNECTED:
       Serial.println("WebSocket connected");
       isConnected = true;
       // Send initial device info
       sendDeviceInfo();
       break;
-    
+
     case WStype_TEXT:
       handleWebSocketMessage(payload, length);
       break;
-    
+
     case WStype_ERROR:
       Serial.println("WebSocket error");
       break;
-    
+
     default:
       break;
   }
@@ -126,19 +126,19 @@ void handleWebSocketMessage(uint8_t * payload, size_t length) {
   // Convert payload to string for easier handling
   String message = String((char*)payload);
   Serial.printf("Received message: %s\n", message.c_str());
-  
+
   // Parse JSON message
   DynamicJsonDocument doc(1024);
   DeserializationError error = deserializeJson(doc, message);
-  
+
   if (error) {
     Serial.printf("JSON parsing error: %s\n", error.c_str());
     return;
   }
-  
+
   // Handle different message types
   String type = doc["type"];
-  
+
   if (type == "sensor_data_received") {
     Serial.println("Server acknowledged sensor data");
   }
@@ -148,14 +148,14 @@ void handleWebSocketMessage(uint8_t * payload, size_t length) {
 void checkMotion() {
   int motionState = digitalRead(PIR_PIN);
   unsigned long currentTime = millis();
-  
+
   // Motion detected
   if (motionState == HIGH) {
     // Debounce motion detection
     if (!motionDetected && (currentTime - lastMotionTime > MOTION_DEBOUNCE_TIME)) {
       motionDetected = true;
       lastMotionTime = currentTime;
-      
+
       // Send motion event with current sensor readings
       sendMotionEvent();
     }
@@ -166,11 +166,11 @@ void checkMotion() {
 
 void readSensorData() {
   unsigned long currentTime = millis();
-  
+
   // Read sensor data periodically
   if (currentTime - lastSensorReadTime > SENSOR_READ_INTERVAL) {
     lastSensorReadTime = currentTime;
-    
+
     // Send sensor data
     sendSensorData();
   }
@@ -179,32 +179,32 @@ void readSensorData() {
 // ===== DATA SENDING FUNCTIONS =====
 void sendDeviceInfo() {
   if (!isConnected) return;
-  
+
   DynamicJsonDocument doc(1024);
   doc["type"] = "device_info";
   doc["device_id"] = DEVICE_ID;
-  
+
   String jsonString;
   serializeJson(doc, jsonString);
-  
+
   webSocket.sendTXT(jsonString);
   Serial.printf("Sent device info: %s\n", jsonString.c_str());
 }
 
 void sendMotionEvent() {
   if (!isConnected) return;
-  
+
   // Read current temperature and humidity
   float temperature = dht.readTemperature();
   float humidity = dht.readHumidity();
-  
+
   // Check if readings are valid
   if (isnan(temperature) || isnan(humidity)) {
     Serial.println("Failed to read from DHT sensor!");
     temperature = 0;
     humidity = 0;
   }
-  
+
   // Create JSON message
   DynamicJsonDocument doc(1024);
   doc["type"] = "motion_event";
@@ -213,10 +213,10 @@ void sendMotionEvent() {
   doc["temperature"] = temperature;
   doc["humidity"] = humidity;
   doc["motion"] = true;
-  
+
   String jsonString;
   serializeJson(doc, jsonString);
-  
+
   // Send to server
   webSocket.sendTXT(jsonString);
   Serial.printf("Sent motion event: %s\n", jsonString.c_str());
@@ -224,17 +224,17 @@ void sendMotionEvent() {
 
 void sendSensorData() {
   if (!isConnected) return;
-  
+
   // Read current temperature and humidity
   float temperature = dht.readTemperature();
   float humidity = dht.readHumidity();
-  
+
   // Check if readings are valid
   if (isnan(temperature) || isnan(humidity)) {
     Serial.println("Failed to read from DHT sensor!");
     return;
   }
-  
+
   // Create JSON message
   DynamicJsonDocument doc(1024);
   doc["type"] = "sensor_data";
@@ -243,10 +243,10 @@ void sendSensorData() {
   doc["temperature"] = temperature;
   doc["humidity"] = humidity;
   doc["motion"] = motionDetected;
-  
+
   String jsonString;
   serializeJson(doc, jsonString);
-  
+
   // Send to server
   webSocket.sendTXT(jsonString);
   Serial.printf("Sent sensor data: %s\n", jsonString.c_str());

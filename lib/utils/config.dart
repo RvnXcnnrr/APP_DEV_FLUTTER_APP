@@ -22,8 +22,8 @@ class AppConfig {
   static String get apiBaseUrl {
     switch (currentEnvironment) {
       case Environment.production:
-        // Replace with your actual Render deployed backend URL
-        return 'https://your-render-app-name.onrender.com';
+        // Render deployed backend URL
+        return 'https://app-dev-flutter-app.onrender.com';
       case Environment.emulator:
         return 'http://10.0.2.2:8000'; // Use 10.0.2.2 for Android emulator to access localhost
       case Environment.web:
@@ -43,8 +43,8 @@ class AppConfig {
     // Use the same environment detection as apiBaseUrl
     switch (currentEnvironment) {
       case Environment.production:
-        // Replace with your actual Render deployed backend URL (using wss for secure WebSocket)
-        return 'wss://your-render-app-name.onrender.com/ws/sensors/?token=$token';
+        // Render deployed backend URL (using wss for secure WebSocket)
+        return 'wss://app-dev-flutter-app.onrender.com/ws/sensors/?token=$token';
       case Environment.emulator:
         return 'ws://10.0.2.2:8000/ws/sensors/?token=$token'; // Use 10.0.2.2 for Android emulator
       case Environment.web:
