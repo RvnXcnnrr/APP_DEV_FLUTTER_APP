@@ -52,7 +52,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # Removed 'allauth.account.middleware.AccountMiddleware' as it's not available in django-allauth 0.51.0
+    'allauth.account.middleware.AccountMiddleware',  # Required for django-allauth 0.58.2+
 ]
 
 ROOT_URLCONF = 'motion_detector_backend.urls'
