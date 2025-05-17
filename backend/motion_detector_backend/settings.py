@@ -103,12 +103,16 @@ DATABASES = {
     }
 }
 
+
 # Use PostgreSQL on Render
 if 'DATABASE_URL' in os.environ:
     DATABASES['default'] = dict(dj_database_url.config(
         conn_max_age=600,
         conn_health_checks=True,
     ))
+
+# Direct PostgreSQL configuration for Render deployment
+DATABASES['default'] = dict(dj_database_url.parse("postgresql://motion_detector_user:NBvmpfLaqH2AH4BE0P93VIdigkOn016U@dpg-d0k5uiffte5s738cqqa0-a.oregon-postgres.render.com/motion_detector"))
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
