@@ -1,8 +1,12 @@
-import React, { createContext, useState, useContext, useCallback } from 'react';
+import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import User from '../models/User';
+import DeviceService from '../services/DeviceService';
 
 // Create the context
 const UserContext = createContext();
+
+// Default device ID - this is the device we're checking ownership for
+const DEFAULT_DEVICE_ID = 'ESP32_001';
 
 /**
  * Provider component for user state
@@ -18,6 +22,27 @@ export function UserProvider({ children, authService }) {
 
   // Error state
   const [error, setError] = useState(null);
+
+  // Create device service
+  const [deviceService] = useState(() => new DeviceService(authService?.apiService));
+
+  // State for device ownership
+  const [isDeviceOwner, setIsDeviceOwner] = useState(false);
+
+  // Check device ownership when user changes
+  useEffect(() => {
+    const checkDeviceOwnership = async () => {
+      if (user && user.email && deviceService) {
+        const isOwner = await deviceService.isDeviceOwner(DEFAULT_DEVICE_ID, user);
+        setIsDeviceOwner(isOwner);
+        console.log(`User ${user.email} ${isOwner ? 'is' : 'is not'} the owner of device ${DEFAULT_DEVICE_ID}`);
+      } else {
+        setIsDeviceOwner(false);
+      }
+    };
+
+    checkDeviceOwnership();
+  }, [user, deviceService]);
 
   // Register a new user
   const register = useCallback(async (firstName, lastName, email, password) => {
@@ -121,17 +146,35 @@ export function UserProvider({ children, authService }) {
   const logout = useCallback(async () => {
     try {
       setIsLoading(true);
+      console.info('Starting logout process');
+
+      // Clear the user state first to update UI immediately
+      setUser(null);
+
+      // Clear any error messages
+      setError(null);
 
       // Logout with the auth service if available
       if (authService) {
-        await authService.logout();
+        try {
+          // We don't await this call to prevent blocking the UI
+          // if there's an issue with the server logout
+          authService.logout()
+            .catch(error => {
+              // Just log the error, don't affect the UI
+              console.warn('Server logout had an issue:', error.message);
+            });
+        } catch (serviceError) {
+          // Just log the error, don't affect the UI
+          console.warn('Error calling logout service:', serviceError);
+        }
       }
 
-      // Clear the user
-      setUser(null);
+      console.info('User logged out successfully');
     } catch (error) {
-      console.error('Logout error:', error);
-      setError(error.message || 'Logout failed');
+      console.error('Logout error in UserContext:', error);
+      // Don't set error state as it might prevent navigation
+      // Just log it for debugging
     } finally {
       setIsLoading(false);
     }
@@ -143,6 +186,7 @@ export function UserProvider({ children, authService }) {
     isLoggedIn: !!user,
     isLoading,
     error,
+    isDeviceOwner,
     register,
     login,
     logout,

@@ -13,9 +13,13 @@ const getEnvironment = () => {
 const config = {
   // Development environment (local)
   development: {
-    // Use the deployed backend by default
-    apiBaseUrl: 'https://app-dev-flutter-app.onrender.com',
-    wsBaseUrl: 'wss://app-dev-flutter-app.onrender.com/ws/sensors/',
+    // Use proxy URLs when running with Vite dev server
+    apiBaseUrl: '', // Empty string means use relative URLs with the proxy
+    wsBaseUrl: '/ws/sensors/', // Relative URL for WebSocket with proxy
+
+    // Direct URLs (uncomment these if not using the proxy)
+    // apiBaseUrl: 'https://app-dev-flutter-app.onrender.com',
+    // wsBaseUrl: 'wss://app-dev-flutter-app.onrender.com/ws/sensors/',
   },
   // Production environment
   production: {

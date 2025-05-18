@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
-import { 
-  FaChevronLeft, 
-  FaChevronRight, 
-  FaAngleDoubleLeft, 
-  FaAngleDoubleRight, 
-  FaChevronDown 
+import React, { useState, useEffect } from 'react';
+import {
+  FaChevronLeft,
+  FaChevronRight,
+  FaAngleDoubleLeft,
+  FaAngleDoubleRight,
+  FaChevronDown,
+  FaExclamationTriangle,
+  FaSpinner,
+  FaThermometerHalf,
+  FaTint
 } from 'react-icons/fa';
 import { useTheme } from '../context/ThemeContext';
+import { useUser } from '../context/UserContext';
+import { useMotionEvents } from '../context/MotionEventContext';
 import { getTheme } from '../utils/theme';
 import TopNavBar from '../components/TopNavBar';
 
@@ -21,7 +27,38 @@ const DashboardPage = () => {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
   const { isDarkMode } = useTheme();
+  const { isTokenOwner } = useUser();
+  const {
+    loadEventsForDay,
+    loadEventsForMonth,
+    hasDayEvents,
+    getEventsForDay,
+    isLoading,
+    error
+  } = useMotionEvents();
+
   const theme = getTheme(isDarkMode);
+
+  // Load events for the current month when the component mounts or when the focused month changes
+  useEffect(() => {
+    const loadEvents = async () => {
+      await loadEventsForMonth(focusedDay.getFullYear(), focusedDay.getMonth() + 1);
+    };
+
+    loadEvents();
+  }, [focusedDay.getFullYear(), focusedDay.getMonth(), loadEventsForMonth]);
+
+  // Load events for the selected day when it changes
+  useEffect(() => {
+    const loadEvents = async () => {
+      await loadEventsForDay(selectedDay);
+    };
+
+    loadEvents();
+  }, [selectedDay, loadEventsForDay]);
+
+  // Get events for the selected day
+  const events = getEventsForDay(selectedDay);
 
   // Helper functions
   const getMonthName = (month) => {
@@ -46,19 +83,19 @@ const DashboardPage = () => {
     const month = focusedDay.getMonth() + 1;
     const daysInMonth = getDaysInMonth(year, month);
     const firstDay = getFirstDayOfMonth(year, month);
-    
+
     const days = [];
-    
+
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDay; i++) {
       days.push(null);
     }
-    
+
     // Add days of the month
     for (let i = 1; i <= daysInMonth; i++) {
       days.push(new Date(year, month - 1, i));
     }
-    
+
     return days;
   };
 
@@ -468,8 +505,8 @@ const DashboardPage = () => {
                   day.getMonth() === selectedDay.getMonth() &&
                   day.getFullYear() === selectedDay.getFullYear();
 
-                // Simulate having events on some days
-                const hasEvents = day.getDate() % 3 === 0;
+                // Check if this day has events using the context
+                const hasEvents = hasDayEvents(day);
 
                 return (
                   <div
@@ -529,8 +566,7 @@ const DashboardPage = () => {
             padding: '4px 8px',
             fontSize: '12px',
           }}>
-            {/* Simulate having a random number of events */}
-            {selectedDay.getDate() % 3 === 0 ? (selectedDay.getDate() % 5) + 1 : 0} events
+            {events.length} events
           </div>
         </div>
 
@@ -544,8 +580,54 @@ const DashboardPage = () => {
           maxHeight: '400px',
           padding: '16px',
         }}>
-          {/* Show placeholder message if no events */}
-          {selectedDay.getDate() % 3 !== 0 ? (
+          {isLoading ? (
+            /* Loading state */
+            <div style={{
+              textAlign: 'center',
+              padding: '32px 16px',
+              color: theme.textSecondary,
+            }}>
+              <FaSpinner
+                size={24}
+                style={{
+                  animation: 'spin 1s linear infinite',
+                  marginBottom: '8px',
+                  color: theme.primary
+                }}
+              />
+              <div>Loading events...</div>
+            </div>
+          ) : error ? (
+            /* Error state */
+            <div style={{
+              textAlign: 'center',
+              padding: '32px 16px',
+              color: theme.error || '#f44336',
+            }}>
+              <FaExclamationTriangle
+                size={24}
+                style={{ marginBottom: '8px' }}
+              />
+              <div>{error}</div>
+            </div>
+          ) : !isTokenOwner ? (
+            /* No access state */
+            <div style={{
+              textAlign: 'center',
+              padding: '32px 16px',
+              color: theme.textSecondary,
+            }}>
+              <FaExclamationTriangle
+                size={24}
+                style={{ marginBottom: '8px' }}
+              />
+              <div>You don't have access to view motion events.</div>
+              <div style={{ fontSize: '14px', marginTop: '8px' }}>
+                Only the device owner can view motion events.
+              </div>
+            </div>
+          ) : events.length === 0 ? (
+            /* No events state */
             <div style={{
               textAlign: 'center',
               padding: '32px 16px',
@@ -554,44 +636,66 @@ const DashboardPage = () => {
               No events on this day
             </div>
           ) : (
-            // Simulate having events
-            Array.from({ length: (selectedDay.getDate() % 5) + 1 }, (_, i) => (
-              <div
-                key={i}
-                style={{
-                  padding: '12px',
-                  borderBottom: i < ((selectedDay.getDate() % 5)) ? `1px solid ${theme.divider}` : 'none',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: '8px',
-                }}>
-                  <span style={{ fontWeight: 'bold' }}>
-                    {`${selectedDay.getHours() + i}:${selectedDay.getMinutes() < 10 ? '0' + selectedDay.getMinutes() : selectedDay.getMinutes()} ${selectedDay.getHours() + i >= 12 ? 'PM' : 'AM'}`}
-                  </span>
-                  <span style={{ color: theme.textSecondary, fontSize: '14px' }}>
-                    Device: ESP32_001
-                  </span>
-                </div>
-                <div style={{
-                  display: 'flex',
-                  gap: '16px',
-                }}>
-                  <div>
-                    <span style={{ color: theme.textSecondary, fontSize: '14px' }}>Temperature</span>
-                    <div style={{ fontWeight: 'bold' }}>{25 + i}°C</div>
+            /* Events list with real data */
+            <div>
+              {events.map((event, index) => (
+                <div
+                  key={event.id || index}
+                  style={{
+                    padding: '12px',
+                    borderBottom: index < events.length - 1 ? `1px solid ${theme.divider}` : 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    marginBottom: '8px',
+                  }}>
+                    <span style={{ fontWeight: 'bold' }}>
+                      {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <span style={{ color: theme.textSecondary, fontSize: '14px' }}>
+                      Device: {event.device_id || 'ESP32_001'}
+                    </span>
                   </div>
-                  <div>
-                    <span style={{ color: theme.textSecondary, fontSize: '14px' }}>Humidity</span>
-                    <div style={{ fontWeight: 'bold' }}>{60 - i}%</div>
+                  <div style={{
+                    display: 'flex',
+                    gap: '16px',
+                  }}>
+                    <div>
+                      <span style={{
+                        color: theme.textSecondary,
+                        fontSize: '14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        <FaThermometerHalf size={14} /> Temperature
+                      </span>
+                      <div style={{ fontWeight: 'bold' }}>
+                        {typeof event.temperature !== 'undefined' ? `${event.temperature.toFixed(1)}°C` : 'N/A'}
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{
+                        color: theme.textSecondary,
+                        fontSize: '14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        <FaTint size={14} /> Humidity
+                      </span>
+                      <div style={{ fontWeight: 'bold' }}>
+                        {typeof event.humidity !== 'undefined' ? `${event.humidity.toFixed(1)}%` : 'N/A'}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
       </div>
@@ -599,6 +703,16 @@ const DashboardPage = () => {
       {/* Year and Month Pickers */}
       <YearPicker />
       <MonthPicker />
+
+      {/* Add CSS for spinner animation */}
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
     </div>
   );
 };

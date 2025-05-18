@@ -132,9 +132,22 @@ const TopNavBar = ({ title }) => {
               </button>
               <button
                 onClick={() => {
+                  // Close the confirmation dialog first
                   setShowLogoutConfirmation(false);
-                  logout();
-                  navigate('/login');
+
+                  // Perform logout
+                  try {
+                    // Call logout function
+                    logout();
+
+                    // Navigate to login page
+                    console.info('Navigating to login page after logout');
+                    navigate('/login');
+                  } catch (error) {
+                    console.error('Error during logout process:', error);
+                    // Still navigate to login page even if there's an error
+                    navigate('/login');
+                  }
                 }}
                 style={{
                   padding: '8px 16px',

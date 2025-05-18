@@ -25,7 +25,12 @@ class ApiService {
    * @param {string} token - The authentication token
    */
   setToken(token) {
+    if (!token) {
+      console.warn('Attempted to set empty token');
+      return;
+    }
     localStorage.setItem('auth_token', token);
+    console.info('Authentication token set successfully');
   }
 
   /**
@@ -33,14 +38,31 @@ class ApiService {
    */
   clearToken() {
     localStorage.removeItem('auth_token');
+    console.info('Authentication token cleared');
+  }
+
+  /**
+   * Checks if a token exists and is not expired
+   * @returns {boolean} Whether a valid token exists
+   */
+  hasValidToken() {
+    const token = this.getToken();
+    if (!token) {
+      return false;
+    }
+
+    // For JWT tokens, we could check expiration
+    // This is a simple implementation that just checks if a token exists
+    return true;
   }
 
   /**
    * Gets headers for API requests
    * @param {boolean} requiresAuth - Whether the request requires authentication
+   * @param {Object} user - The current user object (optional)
    * @returns {Object} Headers for the request
    */
-  getHeaders(requiresAuth = true) {
+  getHeaders(requiresAuth = true, user = null) {
     const headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -53,6 +75,26 @@ class ApiService {
         console.debug('Authorization header:', headers['Authorization']);
       } else {
         console.warn('No token found for authentication');
+      }
+
+      // Add user email to headers if available for device ownership verification
+      if (user && user.email) {
+        headers['X-User-Email'] = user.email;
+        console.debug('User email header:', headers['X-User-Email']);
+      } else {
+        // Try to get email from localStorage if user object not provided
+        try {
+          const storedUser = localStorage.getItem('motion_detector_user');
+          if (storedUser) {
+            const userData = JSON.parse(storedUser);
+            if (userData.email) {
+              headers['X-User-Email'] = userData.email;
+              console.debug('User email header (from localStorage):', headers['X-User-Email']);
+            }
+          }
+        } catch (error) {
+          console.warn('Error getting user email from localStorage:', error);
+        }
       }
     }
 
@@ -95,8 +137,9 @@ class ApiService {
             const jsonData = JSON.parse(text);
             console.debug('Parsed text response as JSON:', jsonData);
             return jsonData;
-          } catch (parseError) {
+          } catch (error) {
             // Not JSON, return as text
+            console.debug('Failed to parse text as JSON:', error.message);
             return text;
           }
         }
@@ -168,8 +211,9 @@ class ApiService {
               } else if (jsonData.message) {
                 errorMessage = jsonData.message;
               }
-            } catch (parseError) {
+            } catch (error) {
               // Not JSON, use the text as is
+              console.debug('Failed to parse error text as JSON:', error.message);
             }
           }
         }
@@ -186,11 +230,12 @@ class ApiService {
    * Makes a GET request to the API
    * @param {string} endpoint - The API endpoint
    * @param {boolean} requiresAuth - Whether the request requires authentication
+   * @param {Object} user - The current user object (optional)
    * @returns {Promise<any>} The response data
    */
-  async get(endpoint, requiresAuth = true) {
+  async get(endpoint, requiresAuth = true, user = null) {
     try {
-      const headers = this.getHeaders(requiresAuth);
+      const headers = this.getHeaders(requiresAuth, user);
 
       console.debug(`GET request to: ${this.baseUrl}/${endpoint}`);
       console.debug('Headers:', headers);
@@ -198,6 +243,8 @@ class ApiService {
       const response = await fetch(`${this.baseUrl}/${endpoint}`, {
         method: 'GET',
         headers,
+        mode: 'cors', // Explicitly set CORS mode
+        credentials: 'include', // Include cookies if needed
       });
 
       return this.handleResponse(response);
@@ -212,11 +259,12 @@ class ApiService {
    * @param {string} endpoint - The API endpoint
    * @param {Object} data - The request data
    * @param {boolean} requiresAuth - Whether the request requires authentication
+   * @param {Object} user - The current user object (optional)
    * @returns {Promise<any>} The response data
    */
-  async post(endpoint, data, requiresAuth = true) {
+  async post(endpoint, data, requiresAuth = true, user = null) {
     try {
-      const headers = this.getHeaders(requiresAuth);
+      const headers = this.getHeaders(requiresAuth, user);
 
       console.debug(`POST request to: ${this.baseUrl}/${endpoint}`);
       console.debug('Headers:', headers);
@@ -229,6 +277,8 @@ class ApiService {
         method: 'POST',
         headers,
         body: JSON.stringify(data),
+        mode: 'cors', // Explicitly set CORS mode
+        credentials: 'include', // Include cookies if needed
       });
 
       console.debug('Response timestamp:', new Date().toISOString());

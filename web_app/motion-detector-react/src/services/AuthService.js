@@ -293,17 +293,64 @@ class AuthService {
   }
 
   /**
+   * Gets the current user's profile
+   * @returns {Promise<Object>} The user profile
+   */
+  async getCurrentUser() {
+    try {
+      console.info('Getting current user profile');
+
+      // Make request to get user profile
+      const response = await this.apiService.get('api/users/profile/', true);
+
+      console.debug('User profile response:', response);
+
+      // Return user data
+      return {
+        id: response.pk || response.id || '',
+        firstName: response.first_name || '',
+        lastName: response.last_name || '',
+        email: response.email || '',
+        username: response.username || response.email || '',
+        profileImageUrl: response.profile_picture || null,
+        theme: response.theme_preference || 'system',
+        emailVerified: response.email_verified || false
+      };
+    } catch (error) {
+      console.error('Error getting user profile:', error);
+      throw new Error('Failed to get user profile. Please try again later.');
+    }
+  }
+
+  /**
    * Logs out the current user
    * @returns {Promise<void>}
    */
   async logout() {
+    // First, check if we have a token
+    const token = this.apiService.getToken();
+
+    if (!token) {
+      console.info('No token found, skipping server logout request');
+      return;
+    }
+
     try {
-      // Make logout request
-      await this.apiService.post('api/auth/logout/', {});
+      // Make logout request, but don't wait for it to complete
+      // This way, even if it fails, we still clear the local token
+      this.apiService.post('api/auth/logout/', {})
+        .then(() => {
+          console.info('Server logout successful');
+        })
+        .catch((error) => {
+          // Just log the error, but don't prevent the local logout
+          console.warn('Server logout failed, but proceeding with local logout:', error.message);
+        });
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Error initiating logout request:', error);
     } finally {
-      // Clear the token regardless of whether the request succeeded
+      // Always clear the local token
+      console.info('Clearing local authentication token');
       this.apiService.clearToken();
     }
   }
