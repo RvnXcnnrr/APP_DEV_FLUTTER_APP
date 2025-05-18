@@ -12,4 +12,25 @@
 # Environment variables
 [context.production.environment]
   VITE_API_BASE_URL = "https://app-dev-flutter-app.onrender.com"
-  VITE_WS_BASE_URL = "wss://app-dev-flutter-app.onrender.com/ws"
+  VITE_WS_BASE_URL = "wss://app-dev-flutter-app.onrender.com/ws/sensors/"
+
+# Set proper MIME types for JavaScript modules
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Content-Type = "text/javascript"
+
+[[headers]]
+  for = "/*.mjs"
+  [headers.values]
+    Content-Type = "text/javascript"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Content-Type = "text/css"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
