@@ -174,15 +174,22 @@ SIMPLE_JWT = {
 }
 
 # CORS settings
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False
 
-# If you want to restrict CORS to specific origins in production, use this instead:
-# CORS_ALLOWED_ORIGINS = [
-#     "https://app-dev-flutter-app.onrender.com",
-#     "http://localhost:3000",
-#     "http://127.0.0.1:3000",
-#     "http://localhost:5173",  # Vite default port
-# ]
+# Specify allowed origins explicitly
+CORS_ALLOWED_ORIGINS = [
+    "https://app-dev-flutter-app.onrender.com",
+    "https://motiondetectorappdev.netlify.app",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",  # Vite default port
+    "http://127.0.0.1:5173",  # Alternative localhost notation
+    "http://localhost:5174",  # Alternative Vite port
+    "http://127.0.0.1:5174",  # Alternative localhost notation
+]
+
+# Allow credentials in CORS requests
+CORS_ALLOW_CREDENTIALS = True
 
 # Allow specific headers in CORS requests
 CORS_ALLOW_HEADERS = [
@@ -196,11 +203,13 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
     'x-user-email',  # Add your custom header here
+    'x-device-owner',  # Add device owner header
 ]
 
 # CSRF settings
 CSRF_TRUSTED_ORIGINS = [
     "https://app-dev-flutter-app.onrender.com",
+    "https://motiondetectorappdev.netlify.app",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
     "http://localhost:5173",  # Vite development server

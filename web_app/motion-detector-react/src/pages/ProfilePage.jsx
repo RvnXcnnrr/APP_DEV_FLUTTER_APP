@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
-import { FaUser, FaCamera, FaSun, FaMoon, FaEdit, FaSave, FaTimes } from 'react-icons/fa';
+import React, { useState, useEffect, useRef } from 'react';
+import { FaUser, FaCamera, FaSun, FaMoon, FaEdit, FaSave, FaTimes, FaSpinner } from 'react-icons/fa';
 import { useTheme } from '../context/ThemeContext';
+import { useUser } from '../context/UserContext';
 import { getTheme } from '../utils/theme';
 import TopNavBar from '../components/TopNavBar';
+import User from '../models/User';
+import './ProfilePage.css';
 
 /**
  * Profile page component
@@ -10,39 +13,131 @@ import TopNavBar from '../components/TopNavBar';
  */
 const ProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
-  const [firstName, setFirstName] = useState('John');
-  const [lastName, setLastName] = useState('Doe');
-  const [email] = useState('john.doe@example.com');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
   const [selectedTheme, setSelectedTheme] = useState('light');
   const [profileImage, setProfileImage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const fileInputRef = useRef(null);
 
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const { user, updateProfile, updateThemePreference } = useUser();
   const theme = getTheme(isDarkMode);
 
+  // Load user data when component mounts or user changes
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName || '');
+      setLastName(user.lastName || '');
+      setEmail(user.email || '');
+      setSelectedTheme(user.theme || (isDarkMode ? 'dark' : 'light'));
+      setProfileImage(user.profileImageUrl || null);
+    }
+  }, [user, isDarkMode]);
+
   // Handle theme change
-  const handleThemeChange = (newTheme) => {
+  const handleThemeChange = async (newTheme) => {
     if (!isEditing) return;
-    
+
     setSelectedTheme(newTheme);
-    if ((newTheme === 'dark' && !isDarkMode) || (newTheme === 'light' && isDarkMode)) {
-      toggleDarkMode();
+
+    try {
+      // Update theme in context
+      if ((newTheme === 'dark' && !isDarkMode) || (newTheme === 'light' && isDarkMode)) {
+        toggleDarkMode();
+      }
+
+      // Update theme on server
+      if (user) {
+        setIsLoading(true);
+        await updateThemePreference(newTheme);
+        setSuccessMessage('Theme updated successfully');
+        setTimeout(() => setSuccessMessage(null), 3000);
+      }
+    } catch (error) {
+      console.error('Error updating theme:', error);
+      setError('Failed to update theme. Please try again.');
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle file selection for profile image
+  const handleFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Create a preview URL for the selected image
+      const imageUrl = URL.createObjectURL(file);
+      setProfileImage(imageUrl);
+    }
+  };
+
+  // Trigger file input click
+  const handleImageClick = () => {
+    if (isEditing && fileInputRef.current) {
+      fileInputRef.current.click();
     }
   };
 
   // Handle save profile
-  const handleSaveProfile = () => {
-    // This is just UI, no actual save logic
-    console.log('Save profile:', { firstName, lastName, email, selectedTheme, profileImage });
-    setIsEditing(false);
+  const handleSaveProfile = async () => {
+    if (!user) return;
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Create updated user object
+      const updatedUser = new User(
+        user.id,
+        firstName,
+        lastName,
+        email,
+        user.username || email,
+        user.profileImageUrl,
+        selectedTheme,
+        user.emailVerified
+      );
+
+      // Create FormData if we have a new profile image
+      let formData = null;
+      if (fileInputRef.current && fileInputRef.current.files[0]) {
+        formData = new FormData();
+        formData.append('profile_picture', fileInputRef.current.files[0]);
+        formData.append('first_name', firstName);
+        formData.append('last_name', lastName);
+        formData.append('theme_preference', selectedTheme);
+      }
+
+      // Update profile
+      await updateProfile(updatedUser, formData);
+
+      setSuccessMessage('Profile updated successfully');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setError('Failed to update profile. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Handle cancel edit
   const handleCancelEdit = () => {
-    // Reset form values (in a real app, would reset to original values from API)
-    setFirstName('John');
-    setLastName('Doe');
-    setSelectedTheme(isDarkMode ? 'dark' : 'light');
+    // Reset form values to current user data
+    if (user) {
+      setFirstName(user.firstName || '');
+      setLastName(user.lastName || '');
+      setSelectedTheme(user.theme || (isDarkMode ? 'dark' : 'light'));
+      setProfileImage(user.profileImageUrl || null);
+    }
     setIsEditing(false);
+    setError(null);
   };
 
   return (
@@ -75,11 +170,12 @@ const ProfilePage = () => {
             marginBottom: '24px',
           }}>
             <h2 style={{ margin: 0, color: theme.primary }}>User Profile</h2>
-            
+
             {isEditing ? (
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   onClick={handleSaveProfile}
+                  disabled={isLoading}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -89,13 +185,16 @@ const ProfilePage = () => {
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',
-                    cursor: 'pointer',
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    opacity: isLoading ? 0.7 : 1,
                   }}
                 >
-                  <FaSave /> Save
+                  {isLoading ? <FaSpinner className="spinner" /> : <FaSave />}
+                  {isLoading ? 'Saving...' : 'Save'}
                 </button>
                 <button
                   onClick={handleCancelEdit}
+                  disabled={isLoading}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -105,7 +204,8 @@ const ProfilePage = () => {
                     color: theme.text,
                     border: `1px solid ${theme.divider}`,
                     borderRadius: '4px',
-                    cursor: 'pointer',
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    opacity: isLoading ? 0.7 : 1,
                   }}
                 >
                   <FaTimes /> Cancel
@@ -131,6 +231,20 @@ const ProfilePage = () => {
             )}
           </div>
 
+          {/* Success/Error Messages */}
+          {(successMessage || error) && (
+            <div style={{
+              padding: '10px',
+              marginBottom: '16px',
+              borderRadius: '4px',
+              backgroundColor: successMessage ? 'rgba(0, 128, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)',
+              color: successMessage ? 'green' : 'red',
+              textAlign: 'center',
+            }}>
+              {successMessage || error}
+            </div>
+          )}
+
           {/* Profile image */}
           <div style={{
             display: 'flex',
@@ -138,18 +252,22 @@ const ProfilePage = () => {
             alignItems: 'center',
             marginBottom: '24px',
           }}>
-            <div style={{
-              width: '120px',
-              height: '120px',
-              borderRadius: '60px',
-              backgroundColor: theme.divider,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-              overflow: 'hidden',
-              marginBottom: '8px',
-            }}>
+            <div
+              onClick={handleImageClick}
+              style={{
+                width: '120px',
+                height: '120px',
+                borderRadius: '60px',
+                backgroundColor: theme.divider,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                overflow: 'hidden',
+                marginBottom: '8px',
+                cursor: isEditing ? 'pointer' : 'default',
+              }}
+            >
               {profileImage ? (
                 <img
                   src={profileImage}
@@ -163,7 +281,7 @@ const ProfilePage = () => {
               ) : (
                 <FaUser size={60} color={theme.textSecondary} />
               )}
-              
+
               {isEditing && (
                 <div style={{
                   position: 'absolute',
@@ -181,17 +299,27 @@ const ProfilePage = () => {
               )}
             </div>
             {isEditing && (
-              <button
-                style={{
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  color: theme.primary,
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                }}
-              >
-                Change Photo
-              </button>
+              <>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                />
+                <button
+                  onClick={handleImageClick}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    color: theme.primary,
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                >
+                  Change Photo
+                </button>
+              </>
             )}
           </div>
 
