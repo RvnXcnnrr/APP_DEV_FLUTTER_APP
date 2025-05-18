@@ -34,6 +34,14 @@ export function MotionEventProvider({ children, motionEventService }) {
   useEffect(() => {
     const checkDeviceOwnership = async () => {
       if (user && user.email && deviceService) {
+        // Special case for ESP32_001 - owner check handled by DeviceService
+        const specialDeviceCheck = await deviceService.isDeviceOwner(DEFAULT_DEVICE_ID, user);
+        if (specialDeviceCheck) {
+          console.log(`User is the owner of device ${DEFAULT_DEVICE_ID}`);
+          setIsDeviceOwner(true);
+          return;
+        }
+
         const isOwner = await deviceService.isDeviceOwner(DEFAULT_DEVICE_ID, user);
         setIsDeviceOwner(isOwner);
         console.log(`User ${user.email} ${isOwner ? 'is' : 'is not'} the owner of device ${DEFAULT_DEVICE_ID}`);

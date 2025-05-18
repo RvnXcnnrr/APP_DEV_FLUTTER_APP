@@ -25,9 +25,35 @@ class MotionEventService {
 
       console.info(`Fetching motion events from ${formattedStartDate} to ${formattedEndDate}`);
 
-      // If user is provided, log the email for debugging
-      if (user && user.email) {
-        console.debug(`User email for request: ${user.email}`);
+      // Ensure we have a user object with email for the request
+      if (!user || !user.email) {
+        console.warn('No user or user email provided for motion events request');
+
+        // Try to get user from localStorage if not provided
+        try {
+          const storedUser = localStorage.getItem('motion_detector_user');
+          if (storedUser) {
+            const userData = JSON.parse(storedUser);
+            if (userData.email) {
+              console.debug('Using user from localStorage:', userData.email);
+              user = userData;
+            }
+          }
+        } catch (error) {
+          console.warn('Error getting user from localStorage:', error);
+        }
+
+        // If still no user, throw error
+        if (!user || !user.email) {
+          throw new Error('User authentication required to fetch motion events');
+        }
+      }
+
+      console.debug(`User email for request: ${user.email}`);
+
+      // Check if this is a special device owner
+      if (this.apiService.isSpecialDeviceOwner(user.email)) {
+        console.debug('Using special case for device owner');
       }
 
       // Make request to get motion events with user object for email header
@@ -46,6 +72,12 @@ class MotionEventService {
       return this.processEvents(events);
     } catch (error) {
       console.error('Error getting motion events:', error);
+
+      // Provide more specific error message
+      if (error.message.includes('authentication') || error.message.includes('authorized')) {
+        throw new Error('You are not authorized to access motion events for this device. Please ensure you are logged in with the correct account.');
+      }
+
       throw new Error('Failed to get motion events. Please try again later.');
     }
   }

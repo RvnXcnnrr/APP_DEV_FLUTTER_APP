@@ -27,15 +27,19 @@ const DashboardPage = () => {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
   const { isDarkMode } = useTheme();
-  const { isTokenOwner } = useUser();
+  const { isTokenOwner, user } = useUser();
   const {
     loadEventsForDay,
     loadEventsForMonth,
     hasDayEvents,
     getEventsForDay,
     isLoading,
-    error
+    error,
+    isDeviceOwner
   } = useMotionEvents();
+
+  // Check if user is the owner of ESP32_001 (email check handled internally)
+  const isESP32Owner = user && user.email && deviceService && deviceService.isDeviceOwner('ESP32_001', user);
 
   const theme = getTheme(isDarkMode);
 
@@ -610,7 +614,7 @@ const DashboardPage = () => {
               />
               <div>{error}</div>
             </div>
-          ) : !isTokenOwner ? (
+          ) : !isTokenOwner && !isDeviceOwner && !isESP32Owner ? (
             /* No access state */
             <div style={{
               textAlign: 'center',
@@ -623,7 +627,7 @@ const DashboardPage = () => {
               />
               <div>You don't have access to view motion events.</div>
               <div style={{ fontSize: '14px', marginTop: '8px' }}>
-                Only the device owner can view motion events.
+                Only the device owner can view motion events for ESP32_001.
               </div>
             </div>
           ) : events.length === 0 ? (

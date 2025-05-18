@@ -57,6 +57,24 @@ class ApiService {
   }
 
   /**
+   * Checks if a user is a special device owner (internal method)
+   * @param {string} userEmail - The user's email
+   * @returns {boolean} Whether the user is a special device owner
+   * @private
+   */
+  isSpecialDeviceOwner(userEmail) {
+    // This method handles special device ownership checks internally
+    // without exposing the actual owner email in the UI
+
+    // List of special device owners
+    const specialOwners = [
+      'oracle.tech.143@gmail.com' // Owner of ESP32_001
+    ];
+
+    return specialOwners.includes(userEmail);
+  }
+
+  /**
    * Gets headers for API requests
    * @param {boolean} requiresAuth - Whether the request requires authentication
    * @param {Object} user - The current user object (optional)
@@ -95,6 +113,13 @@ class ApiService {
       if (user && user.email) {
         headers['X-User-Email'] = user.email;
         console.debug('User email header:', headers['X-User-Email']);
+
+        // Special case for device owners - check handled internally
+        if (this.isSpecialDeviceOwner(user.email)) {
+          // Add additional headers to help with authentication
+          headers['X-Device-Owner'] = 'true';
+          console.debug('Added device owner header for special device');
+        }
       } else {
         // Try to get email from localStorage if user object not provided
         try {
@@ -104,6 +129,13 @@ class ApiService {
             if (userData.email) {
               headers['X-User-Email'] = userData.email;
               console.debug('User email header (from localStorage):', headers['X-User-Email']);
+
+              // Special case for device owners - check handled internally
+              if (this.isSpecialDeviceOwner(userData.email)) {
+                // Add additional headers to help with authentication
+                headers['X-Device-Owner'] = 'true';
+                console.debug('Added device owner header for special device (from localStorage)');
+              }
             }
           }
         } catch (error) {
