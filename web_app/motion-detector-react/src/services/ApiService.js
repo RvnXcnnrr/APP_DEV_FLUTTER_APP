@@ -15,7 +15,32 @@ class ApiService {
     const token = localStorage.getItem('auth_token');
     if (token) {
       console.info('Found existing auth token during ApiService initialization');
+
+      // Check if token is valid and refresh if needed
+      if (!this.hasValidToken()) {
+        console.warn('Existing token may be invalid or expired, will attempt refresh on next request');
+      }
     }
+
+    // Initialize token refresh check
+    this.initTokenRefreshCheck();
+  }
+
+  /**
+   * Initializes periodic token validation check
+   * @private
+   */
+  initTokenRefreshCheck() {
+    // Check token validity every 5 minutes
+    setInterval(() => {
+      const token = this.getToken();
+      if (token && !this.hasValidToken()) {
+        console.info('Performing scheduled token refresh check');
+        this.refreshToken().catch(error => {
+          console.warn('Scheduled token refresh failed:', error.message);
+        });
+      }
+    }, 5 * 60 * 1000); // 5 minutes
   }
 
   /**
@@ -57,8 +82,34 @@ class ApiService {
       return false;
     }
 
-    // For JWT tokens, we could check expiration
-    // This is a simple implementation that just checks if a token exists
+    // For JWT tokens, check if it's a JWT and try to parse it
+    if (token.split('.').length === 3) {
+      try {
+        // Get the payload part of the JWT
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        const payload = JSON.parse(jsonPayload);
+
+        // Check if token is expired
+        if (payload.exp) {
+          const expirationTime = payload.exp * 1000; // Convert to milliseconds
+          const currentTime = Date.now();
+
+          if (currentTime >= expirationTime) {
+            console.warn('Token has expired');
+            return false;
+          }
+        }
+      } catch (error) {
+        console.warn('Error parsing JWT token:', error);
+        return false;
+      }
+    }
+
     return true;
   }
 
@@ -109,8 +160,22 @@ class ApiService {
     if (requiresAuth) {
       const token = this.getToken();
       if (token) {
-        headers['Authorization'] = `Token ${token}`;
+        // Check if it's a JWT token (has 3 parts separated by dots)
+        if (token.split('.').length === 3) {
+          headers['Authorization'] = `Bearer ${token}`;
+        } else {
+          headers['Authorization'] = `Token ${token}`;
+        }
         console.debug('Authorization header:', headers['Authorization']);
+
+        // Check if token is valid
+        if (!this.hasValidToken()) {
+          console.warn('Token may be expired, attempting to refresh...');
+          // We'll continue with the request, but also trigger a token refresh
+          this.refreshToken().catch(error => {
+            console.warn('Token refresh failed:', error.message);
+          });
+        }
       } else {
         console.warn('No token found for authentication');
       }
@@ -134,7 +199,7 @@ class ApiService {
       } else {
         // Try to get email from localStorage if user object not provided
         try {
-          const storedUser = localStorage.getItem('motion_detector_user');
+          const storedUser = localStorage.getItem('user_data');
           if (storedUser) {
             const userData = JSON.parse(storedUser);
             if (userData.email) {
@@ -228,6 +293,28 @@ class ApiService {
       }
     } else {
       console.warn('Error response with status code:', response.status);
+
+      // Handle 401 Unauthorized errors - attempt to refresh token
+      if (response.status === 401) {
+        console.warn('Received 401 Unauthorized response, token may be invalid or expired');
+
+        // Try to refresh the token if we have one
+        const token = this.getToken();
+        if (token) {
+          try {
+            console.info('Attempting to refresh token and retry request');
+            const newToken = await this.refreshToken();
+
+            if (newToken) {
+              console.info('Token refreshed successfully, original request should be retried');
+              throw new Error('Token refreshed, please retry the request');
+            }
+          } catch (refreshError) {
+            console.error('Error during token refresh:', refreshError);
+            // Continue with normal error handling
+          }
+        }
+      }
 
       let errorMessage = `API error: ${response.status} ${response.statusText}`;
 
@@ -398,6 +485,77 @@ class ApiService {
 
       if (error.message.includes('CORS')) {
         throw new Error(`CORS error: The server is not configured to accept requests from ${window.location.origin}. Please check the CORS settings on the backend as described in the 'cors_network_solution_guide.md' file.`);
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Refreshes the authentication token
+   * @returns {Promise<string|null>} The new token
+   */
+  async refreshToken() {
+    try {
+      console.info('Attempting to refresh authentication token');
+
+      // Check if we have a refresh token
+      const refreshToken = localStorage.getItem('refresh_token');
+      const currentToken = this.getToken();
+
+      if (!currentToken) {
+        console.warn('No access token to refresh');
+        return null;
+      }
+
+      let response;
+
+      // If we have a refresh token, use it
+      if (refreshToken) {
+        console.debug('Using stored refresh token');
+
+        // Try to refresh the token using the refresh endpoint
+        response = await this.post('api/auth/token/refresh/', {
+          refresh: refreshToken
+        }, false); // Don't require auth for refresh
+      } else {
+        // Fall back to using the current token as the refresh token
+        console.debug('No refresh token found, using current token');
+
+        // Try to refresh the token using the refresh endpoint
+        response = await this.post('api/auth/token/refresh/', {
+          refresh: currentToken
+        }, false); // Don't require auth for refresh
+      }
+
+      console.debug('Token refresh response:', response);
+
+      // Extract the new token
+      let newToken = null;
+      if (response && response.access) {
+        newToken = response.access;
+      } else if (response && response.token) {
+        newToken = response.token;
+      } else if (response && response.key) {
+        newToken = response.key;
+      }
+
+      if (newToken) {
+        // Save the new token
+        this.setToken(newToken);
+        console.info('Token refreshed successfully');
+        return newToken;
+      } else {
+        console.warn('No token found in refresh response');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error refreshing token:', error);
+
+      // If refresh fails, we might need to clear the token and force re-login
+      if (error.message.includes('401') || error.message.includes('invalid') || error.message.includes('expired')) {
+        console.warn('Token refresh failed with authentication error, clearing token');
+        this.clearToken();
       }
 
       throw error;

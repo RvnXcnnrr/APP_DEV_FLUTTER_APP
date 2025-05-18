@@ -17,7 +17,7 @@ class MotionEventService {
    * @param {Object} user - The current user object (optional)
    * @returns {Promise<Array>} The motion events
    */
-  async getMotionEvents(startDate, endDate, user = null) {
+  async getMotionEvents(startDate, endDate, user = null, retryCount = 0) {
     try {
       // Format dates for API request (YYYY-MM-DD)
       const formattedStartDate = this.formatDateForApi(startDate);
@@ -31,7 +31,7 @@ class MotionEventService {
 
         // Try to get user from localStorage if not provided
         try {
-          const storedUser = localStorage.getItem('motion_detector_user');
+          const storedUser = localStorage.getItem('user_data');
           if (storedUser) {
             const userData = JSON.parse(storedUser);
             if (userData.email) {
@@ -56,20 +56,34 @@ class MotionEventService {
         console.debug('Using special case for device owner');
       }
 
-      // Make request to get motion events with user object for email header
-      const response = await this.apiService.get(
-        `api/sensors/motion-events/?start_date=${formattedStartDate}&end_date=${formattedEndDate}`,
-        true,
-        user
-      );
+      try {
+        // Make request to get motion events with user object for email header
+        const response = await this.apiService.get(
+          `api/sensors/motion-events/?start_date=${formattedStartDate}&end_date=${formattedEndDate}`,
+          true,
+          user
+        );
 
-      console.debug('Motion events response:', response);
+        console.debug('Motion events response:', response);
 
-      // If the response is paginated, extract the results
-      const events = response.results || response;
+        // If the response is paginated, extract the results
+        const events = response.results || response;
 
-      // Process events to ensure they have proper date objects
-      return this.processEvents(events);
+        // Process events to ensure they have proper date objects
+        return this.processEvents(events);
+      } catch (apiError) {
+        // Check if this is a token refresh error and we should retry
+        if (apiError.message.includes('Token refreshed, please retry') && retryCount < 3) {
+          console.info('Token was refreshed, retrying request...');
+          // Wait a short time before retrying
+          await new Promise(resolve => setTimeout(resolve, 500));
+          // Retry the request with incremented retry count
+          return this.getMotionEvents(startDate, endDate, user, retryCount + 1);
+        }
+
+        // If it's not a token refresh error or we've retried too many times, rethrow
+        throw apiError;
+      }
     } catch (error) {
       console.error('Error getting motion events:', error);
 

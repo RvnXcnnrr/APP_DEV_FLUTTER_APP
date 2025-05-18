@@ -120,6 +120,7 @@ class AuthService {
 
       // Extract token from response - check multiple possible token field names
       let token = null;
+      let refreshToken = null;
 
       // Check for different token field names used by different backends
       if (response && response.key) {
@@ -128,8 +129,12 @@ class AuthService {
         token = response.token;
       } else if (response && response.access_token) {
         token = response.access_token;
+        // Check for refresh token
+        refreshToken = response.refresh_token;
       } else if (response && response.access) {
         token = response.access;
+        // Check for refresh token
+        refreshToken = response.refresh;
       }
 
       // Log all response keys to help diagnose token field name
@@ -138,6 +143,12 @@ class AuthService {
       if (token) {
         this.apiService.setToken(token);
         console.info('Token saved:', token);
+
+        // Save refresh token if available
+        if (refreshToken) {
+          localStorage.setItem('refresh_token', refreshToken);
+          console.info('Refresh token saved');
+        }
       } else {
         console.warn('No token found in login response');
         console.warn('Response data:', response);
@@ -650,9 +661,10 @@ class AuthService {
     } catch (error) {
       console.error('Error initiating logout request:', error);
     } finally {
-      // Always clear the local token
-      console.info('Clearing local authentication token');
+      // Always clear the local tokens
+      console.info('Clearing local authentication tokens');
       this.apiService.clearToken();
+      localStorage.removeItem('refresh_token');
     }
   }
 }
