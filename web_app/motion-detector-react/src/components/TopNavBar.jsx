@@ -48,16 +48,20 @@ const TopNavBar = ({ title }) => {
           }}
           aria-label="View Profile"
         >
-          {user && user.profileImageUrl ? (
-            <div
-              style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                overflow: 'hidden',
-                border: `1px solid ${theme.divider}`,
-              }}
-            >
+          <div
+            style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              border: `1px solid ${theme.divider}`,
+              backgroundColor: `${theme.primary}20`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {user && user.profileImageUrl ? (
               <img
                 src={user.profileImageUrl}
                 alt="Profile"
@@ -67,10 +71,25 @@ const TopNavBar = ({ title }) => {
                   objectFit: 'cover',
                 }}
               />
-            </div>
-          ) : (
-            <FaUser size={20} />
-          )}
+            ) : user ? (
+              <div style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                color: theme.primary,
+              }}>
+                {user.firstName && user.lastName
+                  ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`
+                  : user.email.charAt(0).toUpperCase()}
+              </div>
+            ) : (
+              <FaUser size={16} color={theme.primary} />
+            )}
+          </div>
         </button>
 
         {/* Theme toggle button */}

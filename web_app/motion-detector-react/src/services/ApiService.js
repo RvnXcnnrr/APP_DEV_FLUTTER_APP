@@ -10,6 +10,12 @@ class ApiService {
    */
   constructor(baseUrl = AppConfig.apiBaseUrl) {
     this.baseUrl = baseUrl;
+
+    // Check for existing token and set it in the service
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      console.info('Found existing auth token during ApiService initialization');
+    }
   }
 
   /**

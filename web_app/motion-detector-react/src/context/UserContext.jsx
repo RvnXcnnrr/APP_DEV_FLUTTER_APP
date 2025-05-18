@@ -14,8 +14,30 @@ const DEFAULT_DEVICE_ID = 'ESP32_001';
  * @returns {JSX.Element} Provider component
  */
 export function UserProvider({ children, authService }) {
-  // User state
-  const [user, setUser] = useState(null);
+  // Initialize user state from localStorage if available
+  const [user, setUser] = useState(() => {
+    try {
+      const storedUser = localStorage.getItem('user_data');
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        console.info('Restored user data from localStorage:', userData.email);
+        return new User(
+          userData.id,
+          userData.firstName,
+          userData.lastName,
+          userData.email,
+          userData.username,
+          userData.profileImageUrl,
+          userData.theme,
+          userData.emailVerified
+        );
+      }
+    } catch (error) {
+      console.error('Error restoring user from localStorage:', error);
+      localStorage.removeItem('user_data');
+    }
+    return null;
+  });
 
   // Loading state
   const [isLoading, setIsLoading] = useState(false);
@@ -127,6 +149,14 @@ export function UserProvider({ children, authService }) {
       // Store user in state
       setUser(user);
 
+      // Save user data to localStorage for persistence across page refreshes
+      try {
+        localStorage.setItem('user_data', JSON.stringify(user));
+        console.info('User data saved to localStorage');
+      } catch (storageError) {
+        console.warn('Failed to save user data to localStorage:', storageError);
+      }
+
       // Log successful login
       console.log('User logged in successfully:', user);
 
@@ -159,6 +189,14 @@ export function UserProvider({ children, authService }) {
       // Clear the user state first to update UI immediately
       setUser(null);
 
+      // Remove user data from localStorage
+      try {
+        localStorage.removeItem('user_data');
+        console.info('User data removed from localStorage');
+      } catch (storageError) {
+        console.warn('Failed to remove user data from localStorage:', storageError);
+      }
+
       // Clear any error messages
       setError(null);
 
@@ -189,7 +227,7 @@ export function UserProvider({ children, authService }) {
   }, [authService]);
 
   // Update the user's profile
-  const updateProfile = useCallback(async (updatedUser) => {
+  const updateProfile = useCallback(async (updatedUser, formData = null) => {
     if (!authService) {
       console.error('AuthService not provided to UserProvider');
       throw new Error('Authentication service not available');
@@ -201,9 +239,12 @@ export function UserProvider({ children, authService }) {
 
       console.log('Starting profile update process...');
       console.log('Updated user data:', updatedUser);
+      if (formData) {
+        console.log('Profile update includes image upload');
+      }
 
       // Update profile with the auth service
-      const userData = await authService.updateProfile(updatedUser);
+      const userData = await authService.updateProfile(updatedUser, formData);
 
       // Create user object
       const user = new User(
@@ -219,6 +260,14 @@ export function UserProvider({ children, authService }) {
 
       // Store user in state
       setUser(user);
+
+      // Save updated user data to localStorage
+      try {
+        localStorage.setItem('user_data', JSON.stringify(user));
+        console.info('Updated user data saved to localStorage');
+      } catch (storageError) {
+        console.warn('Failed to save updated user data to localStorage:', storageError);
+      }
 
       console.log('Profile updated successfully:', user);
 
@@ -267,6 +316,14 @@ export function UserProvider({ children, authService }) {
       // Store user in state
       setUser(updatedUser);
 
+      // Save updated user data to localStorage
+      try {
+        localStorage.setItem('user_data', JSON.stringify(updatedUser));
+        console.info('Updated user data with new theme saved to localStorage');
+      } catch (storageError) {
+        console.warn('Failed to save updated theme data to localStorage:', storageError);
+      }
+
       console.log('Theme updated successfully:', updatedUser);
 
       return updatedUser;
@@ -294,7 +351,23 @@ export function UserProvider({ children, authService }) {
     logout,
     updateProfile,
     updateThemePreference,
-    setError
+    setError,
+    // Expose setUser for session restoration
+    setUser: (userData) => {
+      setUser(userData);
+
+      // Also save to localStorage for persistence
+      if (userData) {
+        try {
+          localStorage.setItem('user_data', JSON.stringify(userData));
+          console.info('User data saved to localStorage during session restoration');
+        } catch (storageError) {
+          console.warn('Failed to save user data to localStorage during session restoration:', storageError);
+        }
+      }
+
+      console.info('User session restored:', userData?.email);
+    }
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

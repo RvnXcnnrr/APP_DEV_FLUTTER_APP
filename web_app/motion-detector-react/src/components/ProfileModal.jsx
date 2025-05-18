@@ -1,8 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { FaUser, FaTimes, FaSun, FaMoon, FaDesktop, FaEdit, FaSave, FaCamera } from 'react-icons/fa';
+import { FaUser, FaTimes, FaSun, FaMoon, FaDesktop, FaEdit, FaSave, FaCamera, FaSpinner } from 'react-icons/fa';
 import { getTheme } from '../utils/theme';
 import { useUser } from '../context/UserContext';
 import User from '../models/User';
+
+// Define keyframes animation for spinner
+const spinAnimation = `
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+
+// Add the animation to the document
+const styleElement = document.createElement('style');
+styleElement.textContent = spinAnimation;
+document.head.appendChild(styleElement);
 
 /**
  * Profile modal component
@@ -14,8 +27,11 @@ import User from '../models/User';
  * @returns {JSX.Element} Profile modal component
  */
 const ProfileModal = ({ onClose, user, isDarkMode, toggleDarkMode }) => {
-  const { updateProfile, updateThemePreference, isLoading, error } = useUser();
+  const { updateProfile, updateThemePreference, error } = useUser();
   const theme = getTheme(isDarkMode);
+
+  // Local state
+  const [isLoading, setIsLoading] = useState(false);
 
   // Editing state
   const [isEditing, setIsEditing] = useState(false);
@@ -25,14 +41,77 @@ const ProfileModal = ({ onClose, user, isDarkMode, toggleDarkMode }) => {
   const [statusMessage, setStatusMessage] = useState('');
   const [statusType, setStatusType] = useState(''); // 'success' or 'error'
 
+  // Profile image state
+  const [profileImage, setProfileImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = React.useRef(null);
+
   // Initialize form values when user data changes
   useEffect(() => {
     if (user) {
       setFirstName(user.firstName || '');
       setLastName(user.lastName || '');
       setSelectedTheme(user.theme || 'system');
+
+      // Reset image preview when user changes or when exiting edit mode
+      setImagePreview(user.profileImageUrl || null);
+      setProfileImage(null);
     }
   }, [user]);
+
+  // Handle image selection
+  const handleImageSelect = (event) => {
+    // Clear any previous status messages
+    setStatusMessage('');
+    setStatusType('');
+
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      setStatusMessage('Please select an image file (JPEG, PNG, etc.)');
+      setStatusType('error');
+      return;
+    }
+
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setStatusMessage('Image size should be less than 5MB');
+      setStatusType('error');
+      return;
+    }
+
+    // Set the selected file
+    setProfileImage(file);
+
+    // Show a status message
+    setStatusMessage('Image selected. Click Save to upload.');
+    setStatusType('success');
+
+    // Create a preview URL
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+
+    // Log information about the selected file
+    console.log('Selected image file:', {
+      name: file.name,
+      type: file.type,
+      size: `${(file.size / 1024).toFixed(2)} KB`
+    });
+  };
+
+  // Trigger file input click
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
 
   // Get user's theme preference
   const getUserThemePreference = () => {
@@ -55,8 +134,12 @@ const ProfileModal = ({ onClose, user, isDarkMode, toggleDarkMode }) => {
   const handleSaveProfile = async () => {
     try {
       setStatusMessage('');
+      setStatusType('');
 
       if (!user) return;
+
+      // Set loading state
+      setIsLoading(true);
 
       // Create updated user object
       const updatedUser = new User(
@@ -65,24 +148,89 @@ const ProfileModal = ({ onClose, user, isDarkMode, toggleDarkMode }) => {
         lastName,
         user.email,
         user.email, // Use email as username
-        user.profileImageUrl,
+        imagePreview, // Use the preview URL for immediate UI update
         selectedTheme,
         user.emailVerified
       );
 
-      // Update profile
-      await updateProfile(updatedUser);
+      // Handle profile image upload separately if we have a new image
+      if (profileImage) {
+        try {
+          setIsUploadingImage(true);
+          setStatusMessage('Uploading profile image...');
+          setStatusType('info');
 
-      // Show success message
-      setStatusMessage('Profile updated successfully');
-      setStatusType('success');
+          // Create FormData for the image upload
+          const formData = new FormData();
+          formData.append('profile_picture', profileImage);
+          formData.append('first_name', firstName);
+          formData.append('last_name', lastName);
+          formData.append('theme_preference', selectedTheme);
 
-      // Exit edit mode
-      setIsEditing(false);
+          console.log('Uploading profile image with form data');
+
+          // Simulate upload progress (since we can't track actual progress with fetch)
+          const progressInterval = setInterval(() => {
+            setUploadProgress(prev => {
+              const newProgress = prev + Math.random() * 15;
+              return newProgress > 90 ? 90 : newProgress; // Cap at 90% until complete
+            });
+          }, 300);
+
+          try {
+            // Update profile with image
+            await updateProfile(updatedUser, formData);
+
+            // Complete the progress bar
+            clearInterval(progressInterval);
+            setUploadProgress(100);
+
+            // Show success message
+            setStatusMessage('Profile and image updated successfully');
+            setStatusType('success');
+
+            // Exit edit mode
+            setIsEditing(false);
+
+            // Reset image state
+            setProfileImage(null);
+          } catch (uploadError) {
+            clearInterval(progressInterval);
+            console.error('Error uploading profile image:', uploadError);
+
+            // Try to update profile without image as fallback
+            setStatusMessage('Failed to upload image. Updating profile information only...');
+            setStatusType('warning');
+
+            // Update profile without image
+            await updateProfile(updatedUser);
+
+            setStatusMessage('Profile updated, but image upload failed. Please try again later.');
+            setStatusType('warning');
+
+            // Don't exit edit mode so user can try again
+          }
+        } finally {
+          setIsUploadingImage(false);
+          setUploadProgress(0);
+        }
+      } else {
+        // Update profile without image
+        await updateProfile(updatedUser);
+
+        // Show success message
+        setStatusMessage('Profile updated successfully');
+        setStatusType('success');
+
+        // Exit edit mode
+        setIsEditing(false);
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
       setStatusMessage(error.message || 'Failed to update profile');
       setStatusType('error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -154,16 +302,19 @@ const ProfileModal = ({ onClose, user, isDarkMode, toggleDarkMode }) => {
               style={{
                 background: 'none',
                 border: 'none',
-                cursor: 'pointer',
-                color: theme.primary,
+                cursor: isLoading || isUploadingImage ? 'default' : 'pointer',
+                color: isLoading || isUploadingImage ? theme.textSecondary : theme.primary,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                opacity: isLoading || isUploadingImage ? 0.7 : 1,
               }}
               aria-label={isEditing ? "Save" : "Edit"}
-              disabled={isLoading}
+              disabled={isLoading || isUploadingImage}
             >
-              {isEditing ? <FaSave size={18} /> : <FaEdit size={18} />}
+              {isEditing ?
+                (isLoading || isUploadingImage ? <FaSpinner size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <FaSave size={18} />)
+                : <FaEdit size={18} />}
             </button>
 
             {/* Close button */}
@@ -172,10 +323,12 @@ const ProfileModal = ({ onClose, user, isDarkMode, toggleDarkMode }) => {
               style={{
                 background: 'none',
                 border: 'none',
-                cursor: 'pointer',
-                color: theme.textSecondary,
+                cursor: isLoading || isUploadingImage ? 'default' : 'pointer',
+                color: isLoading || isUploadingImage ? `${theme.textSecondary}80` : theme.textSecondary,
+                opacity: isLoading || isUploadingImage ? 0.7 : 1,
               }}
               aria-label="Close"
+              disabled={isLoading || isUploadingImage}
             >
               <FaTimes size={20} />
             </button>
@@ -195,26 +348,32 @@ const ProfileModal = ({ onClose, user, isDarkMode, toggleDarkMode }) => {
             alignItems: 'center',
             marginBottom: '24px',
           }}>
-            <div style={{
-              width: '100px',
-              height: '100px',
-              borderRadius: '50%',
-              backgroundColor: `${theme.primary}20`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'hidden',
-              marginBottom: '12px',
-              border: `1px solid ${theme.divider}`,
-            }}>
-              {user && user.profileImageUrl ? (
+            <div
+              style={{
+                width: '120px',
+                height: '120px',
+                borderRadius: '50%',
+                backgroundColor: `${theme.primary}20`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                marginBottom: '12px',
+                border: `1px solid ${theme.divider}`,
+                position: 'relative',
+                cursor: isEditing && !isUploadingImage ? 'pointer' : 'default',
+              }}
+              onClick={isEditing && !isUploadingImage ? triggerFileInput : undefined}
+            >
+              {imagePreview ? (
                 <img
-                  src={user.profileImageUrl}
+                  src={imagePreview}
                   alt="Profile"
                   style={{
                     width: '100%',
                     height: '100%',
                     objectFit: 'cover',
+                    opacity: isUploadingImage ? 0.7 : 1,
                   }}
                 />
               ) : (
@@ -227,24 +386,121 @@ const ProfileModal = ({ onClose, user, isDarkMode, toggleDarkMode }) => {
                   fontSize: '36px',
                   fontWeight: 'bold',
                   color: theme.primary,
+                  opacity: isUploadingImage ? 0.7 : 1,
                 }}>
                   {getInitials()}
                 </div>
               )}
+
+              {/* Upload progress overlay */}
+              {isUploadingImage && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  color: 'white',
+                }}>
+                  <FaSpinner
+                    size={30}
+                    style={{
+                      animation: 'spin 1s linear infinite',
+                      marginBottom: '8px',
+                    }}
+                  />
+                  <div style={{ fontSize: '14px', marginBottom: '4px' }}>
+                    Uploading...
+                  </div>
+                  <div style={{ fontSize: '12px' }}>
+                    {Math.round(uploadProgress)}%
+                  </div>
+                </div>
+              )}
+
+              {/* Camera overlay when editing */}
+              {isEditing && !isUploadingImage && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                  padding: '8px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <FaCamera color="white" size={20} />
+                </div>
+              )}
+
+              {/* Hidden file input */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageSelect}
+                accept="image/*"
+                style={{ display: 'none' }}
+                disabled={isUploadingImage}
+              />
             </div>
+
+            {isEditing && (
+              <button
+                onClick={triggerFileInput}
+                disabled={isUploadingImage}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: isUploadingImage ? theme.textSecondary : theme.primary,
+                  cursor: isUploadingImage ? 'default' : 'pointer',
+                  fontSize: '14px',
+                  marginBottom: '8px',
+                  opacity: isUploadingImage ? 0.7 : 1,
+                }}
+              >
+                {isUploadingImage ? 'Uploading...' : profileImage ? 'Change Photo' : 'Add Photo'}
+              </button>
+            )}
           </div>
 
           {/* Status message */}
           {statusMessage && (
             <div style={{
-              backgroundColor: statusType === 'success' ? '#e8f5e9' : '#ffebee',
-              color: statusType === 'success' ? '#2e7d32' : '#c62828',
+              backgroundColor:
+                statusType === 'success' ? '#e8f5e9' :
+                statusType === 'error' ? '#ffebee' :
+                statusType === 'warning' ? '#fff8e1' :
+                statusType === 'info' ? '#e3f2fd' : '#f5f5f5',
+              color:
+                statusType === 'success' ? '#2e7d32' :
+                statusType === 'error' ? '#c62828' :
+                statusType === 'warning' ? '#f57f17' :
+                statusType === 'info' ? '#1565c0' : '#424242',
               padding: '8px 16px',
               borderRadius: '4px',
               marginBottom: '16px',
               fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
             }}>
-              {statusMessage}
+              <span>{statusMessage}</span>
+              {isUploadingImage && (
+                <FaSpinner
+                  size={14}
+                  style={{
+                    animation: 'spin 1s linear infinite',
+                    marginLeft: '8px',
+                  }}
+                />
+              )}
             </div>
           )}
 

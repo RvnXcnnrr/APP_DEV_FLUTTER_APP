@@ -325,66 +325,236 @@ class AuthService {
   /**
    * Updates the user's profile
    * @param {Object} user - The user object with updated fields
+   * @param {FormData} formData - Optional FormData for file uploads
    * @returns {Promise<Object>} The updated user profile
    */
-  async updateProfile(user) {
+  async updateProfile(user, formData = null) {
     try {
       console.info('Updating user profile:', user.firstName, user.lastName);
 
-      // Create a map with ONLY the fields we want to update
-      // Explicitly exclude username and email to avoid validation errors
-      const userData = {
-        first_name: user.firstName,
-        last_name: user.lastName,
-        theme_preference: user.theme,
-        // Don't include email or username fields
-      };
+      // If we have FormData (for image upload), use that
+      if (formData) {
+        console.info('Updating profile with image upload');
 
-      console.debug('User data being sent to backend:', userData);
+        try {
+          // Use the custom endpoint for file uploads
+          const response = await this.uploadProfileImage(formData);
 
-      // First try the dj-rest-auth endpoint with PATCH (partial update)
-      try {
-        const response = await this.apiService.patch('api/auth/user/', userData);
+          console.info('Profile with image updated successfully');
+          console.debug('Response from server:', response);
 
-        console.info('Profile updated successfully with dj-rest-auth endpoint');
-        console.debug('Response from server:', response);
-
-        // Return user data
-        return {
-          id: response.pk || response.id || user.id,
-          firstName: response.first_name || user.firstName,
-          lastName: response.last_name || user.lastName,
-          email: response.email || user.email,
-          username: response.username || user.email,
-          profileImageUrl: response.profile_picture || user.profileImageUrl,
-          theme: response.theme_preference || user.theme,
-          emailVerified: response.email_verified !== undefined ? response.email_verified : user.emailVerified
+          // Return user data
+          return {
+            id: response.pk || response.id || user.id,
+            firstName: response.first_name || user.firstName,
+            lastName: response.last_name || user.lastName,
+            email: response.email || user.email,
+            username: response.username || user.email,
+            profileImageUrl: response.profile_picture || user.profileImageUrl,
+            theme: response.theme_preference || user.theme,
+            emailVerified: response.email_verified !== undefined ? response.email_verified : user.emailVerified
+          };
+        } catch (error) {
+          console.error('Error uploading profile image:', error);
+          throw new Error('Failed to upload profile image. Please try again later.');
+        }
+      } else {
+        // Regular JSON update without file upload
+        // Create a map with ONLY the fields we want to update
+        // Explicitly exclude username and email to avoid validation errors
+        const userData = {
+          first_name: user.firstName,
+          last_name: user.lastName,
+          theme_preference: user.theme,
+          // Don't include email or username fields
         };
-      } catch (error) {
-        // If that fails, try the custom endpoint with PATCH
-        console.warn('Failed to update profile with dj-rest-auth endpoint:', error);
-        console.info('Trying custom endpoint...');
 
-        const response = await this.apiService.patch('api/users/profile/', userData);
+        console.debug('User data being sent to backend:', userData);
 
-        console.info('Profile updated successfully with custom endpoint');
-        console.debug('Response from server:', response);
+        // First try the dj-rest-auth endpoint with PATCH (partial update)
+        try {
+          const response = await this.apiService.patch('api/auth/user/', userData);
 
-        // Return user data
-        return {
-          id: response.pk || response.id || user.id,
-          firstName: response.first_name || user.firstName,
-          lastName: response.last_name || user.lastName,
-          email: response.email || user.email,
-          username: response.username || user.email,
-          profileImageUrl: response.profile_picture || user.profileImageUrl,
-          theme: response.theme_preference || user.theme,
-          emailVerified: response.email_verified !== undefined ? response.email_verified : user.emailVerified
-        };
+          console.info('Profile updated successfully with dj-rest-auth endpoint');
+          console.debug('Response from server:', response);
+
+          // Return user data
+          return {
+            id: response.pk || response.id || user.id,
+            firstName: response.first_name || user.firstName,
+            lastName: response.last_name || user.lastName,
+            email: response.email || user.email,
+            username: response.username || user.email,
+            profileImageUrl: response.profile_picture || user.profileImageUrl,
+            theme: response.theme_preference || user.theme,
+            emailVerified: response.email_verified !== undefined ? response.email_verified : user.emailVerified
+          };
+        } catch (error) {
+          // If that fails, try the custom endpoint with PATCH
+          console.warn('Failed to update profile with dj-rest-auth endpoint:', error);
+          console.info('Trying custom endpoint...');
+
+          const response = await this.apiService.patch('api/users/profile/', userData);
+
+          console.info('Profile updated successfully with custom endpoint');
+          console.debug('Response from server:', response);
+
+          // Return user data
+          return {
+            id: response.pk || response.id || user.id,
+            firstName: response.first_name || user.firstName,
+            lastName: response.last_name || user.lastName,
+            email: response.email || user.email,
+            username: response.username || user.email,
+            profileImageUrl: response.profile_picture || user.profileImageUrl,
+            theme: response.theme_preference || user.theme,
+            emailVerified: response.email_verified !== undefined ? response.email_verified : user.emailVerified
+          };
+        }
       }
     } catch (error) {
       console.error('Error updating profile:', error);
       throw new Error('Failed to update profile. Please try again later.');
+    }
+  }
+
+  /**
+   * Uploads a profile image
+   * @param {FormData} formData - FormData containing the image and other profile data
+   * @returns {Promise<Object>} The updated user profile
+   */
+  async uploadProfileImage(formData) {
+    try {
+      console.info('Uploading profile image');
+
+      // Get the token
+      const token = this.apiService.getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      // Create headers for multipart/form-data
+      const headers = {
+        'Authorization': `Token ${token}`,
+        // Don't set Content-Type for FormData, browser will set it with boundary
+      };
+
+      // Add Origin header for CORS
+      headers['Origin'] = window.location.origin;
+
+      // Add CSRF token if available
+      const csrfToken = this.apiService.getCsrfToken();
+      if (csrfToken) {
+        if (csrfToken === 'cross-origin-workaround') {
+          headers['X-Requested-With'] = 'XMLHttpRequest';
+        } else {
+          headers['X-CSRFToken'] = csrfToken;
+        }
+      }
+
+      console.debug('Headers for image upload:', headers);
+
+      // Try multiple endpoints in sequence
+      const endpoints = [
+        // First try the dedicated profile picture endpoint (like in Flutter app)
+        'api/users/profile/picture/',
+        // Then try the dj-rest-auth endpoint
+        'api/auth/profile-picture/',
+        // Finally fall back to the general profile endpoint
+        'api/users/profile/'
+      ];
+
+      let response = null;
+      let lastError = null;
+
+      // Try each endpoint until one works
+      for (const endpoint of endpoints) {
+        try {
+          console.info(`Trying to upload profile image to endpoint: ${endpoint}`);
+
+          // Determine the appropriate method based on the endpoint
+          const method = endpoint.includes('picture') ? 'PUT' : 'PATCH';
+
+          // Try with the proxy approach first
+          try {
+            const url = `${this.apiService.baseUrl}/${endpoint}`;
+            console.debug(`Uploading to: ${url} with method: ${method}`);
+
+            response = await fetch(url, {
+              method: method,
+              headers,
+              body: formData,
+              mode: 'cors',
+              credentials: 'include',
+            });
+
+            console.debug(`Response status from ${endpoint}:`, response.status);
+
+            // If successful, break out of the loop
+            if (response.ok) {
+              console.info(`Successfully uploaded profile image to ${endpoint}`);
+              break;
+            }
+          } catch (proxyError) {
+            console.warn(`Proxy request to ${endpoint} failed:`, proxyError.message);
+
+            // If proxy fails, try direct API call
+            console.warn('Trying direct API call as fallback...');
+
+            const directUrl = `${AppConfig.directApiBaseUrl}/${endpoint}`;
+            console.debug(`Making direct API call to: ${directUrl}`);
+
+            response = await fetch(directUrl, {
+              method: method,
+              headers,
+              body: formData,
+              mode: 'cors',
+              credentials: 'include',
+            });
+
+            console.debug(`Direct API call response status from ${endpoint}:`, response.status);
+
+            // If successful, break out of the loop
+            if (response.ok) {
+              console.info(`Successfully uploaded profile image to ${endpoint} via direct API call`);
+              break;
+            }
+          }
+
+          // If we get here and the response is not ok, store the error and try the next endpoint
+          if (!response.ok) {
+            const errorText = await response.text();
+            lastError = new Error(`Failed to upload to ${endpoint}: ${errorText}`);
+            console.warn(`Failed to upload to ${endpoint}:`, errorText);
+          }
+        } catch (endpointError) {
+          console.warn(`Error trying endpoint ${endpoint}:`, endpointError);
+          lastError = endpointError;
+        }
+      }
+
+      // If we have a successful response, parse and return the data
+      if (response && response.ok) {
+        try {
+          const data = await response.json();
+          console.debug('Profile image upload response:', data);
+          return data;
+        } catch (jsonError) {
+          console.warn('Error parsing JSON response:', jsonError);
+          // If we can't parse JSON but the request was successful, return a basic success object
+          return {
+            success: true,
+            message: 'Profile image uploaded successfully'
+          };
+        }
+      } else {
+        // If all endpoints failed, throw the last error
+        console.error('All profile image upload endpoints failed');
+        throw lastError || new Error('Failed to upload profile image');
+      }
+    } catch (error) {
+      console.error('Error in uploadProfileImage:', error);
+      throw error;
     }
   }
 
