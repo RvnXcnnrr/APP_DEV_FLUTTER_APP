@@ -203,6 +203,10 @@ CSRF_TRUSTED_ORIGINS = [
     "https://app-dev-flutter-app.onrender.com",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+    "http://localhost:5173",  # Vite development server
+    "http://127.0.0.1:5173",  # Alternative localhost notation
+    "http://localhost:5174",  # Alternative Vite port
+    "http://127.0.0.1:5174",  # Alternative localhost notation
 ]
 
 # Django AllAuth settings

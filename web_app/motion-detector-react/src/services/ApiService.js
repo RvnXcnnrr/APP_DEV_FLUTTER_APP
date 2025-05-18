@@ -68,6 +68,20 @@ class ApiService {
       'Accept': 'application/json',
     };
 
+    // Add CSRF token if available
+    const csrfToken = this.getCsrfToken();
+    if (csrfToken) {
+      if (csrfToken === 'cross-origin-workaround') {
+        // For cross-origin requests to Render, we might not be able to access the CSRF cookie
+        // In this case, we'll add a special header to indicate we're making a cross-origin request
+        headers['X-Requested-With'] = 'XMLHttpRequest';
+        console.debug('Using XMLHttpRequest header for cross-origin request');
+      } else {
+        headers['X-CSRFToken'] = csrfToken;
+        console.debug('CSRF token header:', headers['X-CSRFToken']);
+      }
+    }
+
     if (requiresAuth) {
       const token = this.getToken();
       if (token) {
@@ -99,6 +113,23 @@ class ApiService {
     }
 
     return headers;
+  }
+
+  /**
+   * Gets the CSRF token from cookies
+   * @returns {string|null} The CSRF token
+   */
+  getCsrfToken() {
+    // Try to get the CSRF token from cookies
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      // Django's CSRF cookie is named 'csrftoken'
+      if (cookie.startsWith('csrftoken=')) {
+        return cookie.substring('csrftoken='.length, cookie.length);
+      }
+    }
+    return null;
   }
 
   /**
@@ -235,6 +266,11 @@ class ApiService {
    */
   async get(endpoint, requiresAuth = true, user = null) {
     try {
+      // Try to fetch a CSRF token first if we don't have one
+      if (!this.getCsrfToken()) {
+        await this.fetchCsrfToken();
+      }
+
       const headers = this.getHeaders(requiresAuth, user);
 
       console.debug(`GET request to: ${this.baseUrl}/${endpoint}`);
@@ -255,6 +291,45 @@ class ApiService {
   }
 
   /**
+   * Fetches a CSRF token from the server
+   * @returns {Promise<string|null>} The CSRF token
+   */
+  async fetchCsrfToken() {
+    try {
+      // Make a GET request to the server to get a CSRF cookie
+      console.debug('Fetching CSRF token...');
+
+      // Use a simple endpoint that doesn't require authentication
+      await fetch(`${this.baseUrl}/api/auth/`, {
+        method: 'GET',
+        credentials: 'include', // Important: include cookies
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+
+      // The server should set a CSRF cookie
+      // Now try to get it from the cookies
+      const csrfToken = this.getCsrfToken();
+      console.debug('Fetched CSRF token:', csrfToken);
+
+      // If we couldn't get a CSRF token, try a workaround for cross-origin requests
+      if (!csrfToken) {
+        console.debug('No CSRF token found in cookies, using workaround for cross-origin requests');
+        // For cross-origin requests to Render, we might not be able to access the CSRF cookie
+        // In this case, we'll try to make the request without a CSRF token
+        return 'cross-origin-workaround';
+      }
+
+      return csrfToken;
+    } catch (error) {
+      console.error('Error fetching CSRF token:', error);
+      return null;
+    }
+  }
+
+  /**
    * Makes a POST request to the API
    * @param {string} endpoint - The API endpoint
    * @param {Object} data - The request data
@@ -264,6 +339,11 @@ class ApiService {
    */
   async post(endpoint, data, requiresAuth = true, user = null) {
     try {
+      // Try to fetch a CSRF token first if we don't have one
+      if (!this.getCsrfToken()) {
+        await this.fetchCsrfToken();
+      }
+
       const headers = this.getHeaders(requiresAuth, user);
 
       console.debug(`POST request to: ${this.baseUrl}/${endpoint}`);
@@ -282,6 +362,32 @@ class ApiService {
       });
 
       console.debug('Response timestamp:', new Date().toISOString());
+
+      // Check if we got a CSRF error
+      if (response.status === 403 && (await response.text()).includes('CSRF')) {
+        console.warn('CSRF error detected, trying direct API call workaround');
+
+        // Try a direct API call without proxy
+        const directUrl = endpoint.startsWith('api/')
+          ? `https://app-dev-flutter-app.onrender.com/${endpoint}`
+          : `https://app-dev-flutter-app.onrender.com/api/${endpoint}`;
+
+        console.debug(`Retrying with direct API call to: ${directUrl}`);
+
+        // Add origin header for CORS
+        headers['Origin'] = window.location.origin;
+
+        const directResponse = await fetch(directUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(data),
+          mode: 'cors',
+          credentials: 'include',
+        });
+
+        return this.handleResponse(directResponse);
+      }
+
       return this.handleResponse(response);
     } catch (error) {
       console.error('Network error during POST request:', error);
@@ -295,6 +401,11 @@ class ApiService {
       // If the error is a network error (e.g., CORS, server down), provide a more helpful message
       if (error.message === 'Failed to fetch') {
         throw new Error(`Network error: Could not connect to ${this.baseUrl}. Please check your internet connection and make sure the server is running.`);
+      }
+
+      // If we get a CSRF error, provide a more helpful message
+      if (error.message.includes('CSRF')) {
+        throw new Error(`CSRF validation failed. Please follow the instructions in the 'render_csrf_update_instructions.md' file to update your Render deployment settings.`);
       }
 
       throw error;
