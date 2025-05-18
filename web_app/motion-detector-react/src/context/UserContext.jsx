@@ -246,13 +246,15 @@ export function UserProvider({ children, authService }) {
       // Update profile with the auth service
       const userData = await authService.updateProfile(updatedUser, formData);
 
+      console.log('Updated user data:', userData);
+
       // Create user object
       const user = new User(
         userData.id,
         userData.firstName,
         userData.lastName,
         userData.email,
-        userData.username,
+        userData.username || userData.email, // Ensure username is set
         userData.profileImageUrl,
         userData.theme,
         userData.emailVerified
@@ -301,13 +303,15 @@ export function UserProvider({ children, authService }) {
       // Update theme with the auth service
       const userData = await authService.updateThemePreference(user, theme);
 
+      console.log('Updated theme data:', userData);
+
       // Create user object
       const updatedUser = new User(
         userData.id,
         userData.firstName,
         userData.lastName,
         userData.email,
-        userData.username,
+        userData.username || userData.email, // Ensure username is set
         userData.profileImageUrl,
         userData.theme,
         userData.emailVerified

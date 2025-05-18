@@ -347,6 +347,7 @@ class AuthService {
       // If we have FormData (for image upload), use that
       if (formData) {
         console.info('Updating profile with image upload');
+        console.log('Uploading profile image with form data');
 
         try {
           // Use the custom endpoint for file uploads
@@ -355,17 +356,8 @@ class AuthService {
           console.info('Profile with image updated successfully');
           console.debug('Response from server:', response);
 
-          // Return user data
-          return {
-            id: response.pk || response.id || user.id,
-            firstName: response.first_name || user.firstName,
-            lastName: response.last_name || user.lastName,
-            email: response.email || user.email,
-            username: response.username || user.email,
-            profileImageUrl: response.profile_picture || user.profileImageUrl,
-            theme: response.theme_preference || user.theme,
-            emailVerified: response.email_verified !== undefined ? response.email_verified : user.emailVerified
-          };
+          // Return user data from the uploadProfileImage method
+          return response;
         } catch (error) {
           console.error('Error uploading profile image:', error);
           throw new Error('Failed to upload profile image. Please try again later.');
@@ -382,44 +374,55 @@ class AuthService {
         };
 
         console.debug('User data being sent to backend:', userData);
+        console.log('Updating user profile:', user.firstName, user.lastName);
 
+        let response;
         // For Netlify deployments, we need to handle CORS differently
         // First try the dj-rest-auth endpoint with PATCH (partial update)
         try {
           // Add user object to the request for email header
-          const response = await this.apiService.patch('api/auth/user/', userData, true, user);
+          response = await this.apiService.patch('api/auth/user/', userData, true, user);
 
           console.info('Profile updated successfully with dj-rest-auth endpoint');
           console.debug('Response from server:', response);
-
-          // Return user data
-          return {
-            id: response.pk || response.id || user.id,
-            firstName: response.first_name || user.firstName,
-            lastName: response.last_name || user.lastName,
-            email: response.email || user.email,
-            username: response.username || user.email,
-            profileImageUrl: response.profile_picture || user.profileImageUrl,
-            theme: response.theme_preference || user.theme,
-            emailVerified: response.email_verified !== undefined ? response.email_verified : user.emailVerified
-          };
         } catch (error) {
           // If that fails, try the custom endpoint with PATCH
           console.warn('Failed to update profile with dj-rest-auth endpoint:', error);
           console.info('Trying custom endpoint...');
 
-          const response = await this.apiService.patch('api/users/profile/', userData, true, user);
+          response = await this.apiService.patch('api/users/profile/', userData, true, user);
 
           console.info('Profile updated successfully with custom endpoint');
           console.debug('Response from server:', response);
+        }
 
-          // Return user data
+        // After successful update, fetch the updated user profile to ensure we have the latest data
+        try {
+          console.info('Fetching updated user profile after update');
+          const updatedProfile = await this.apiService.get('api/users/profile/', true);
+          console.debug('Updated profile after update:', updatedProfile);
+
+          // Return the complete user profile data
+          return {
+            id: updatedProfile.pk || updatedProfile.id || user.id,
+            firstName: updatedProfile.first_name || user.firstName,
+            lastName: updatedProfile.last_name || user.lastName,
+            email: updatedProfile.email || user.email,
+            username: updatedProfile.username || updatedProfile.email || user.email,
+            profileImageUrl: updatedProfile.profile_picture || user.profileImageUrl,
+            theme: updatedProfile.theme_preference || user.theme,
+            emailVerified: updatedProfile.email_verified !== undefined ? updatedProfile.email_verified : user.emailVerified
+          };
+        } catch (profileError) {
+          console.warn('Error fetching updated profile after update:', profileError);
+
+          // If we can't fetch the updated profile, return what we have from the update response
           return {
             id: response.pk || response.id || user.id,
             firstName: response.first_name || user.firstName,
             lastName: response.last_name || user.lastName,
             email: response.email || user.email,
-            username: response.username || user.email,
+            username: response.username || response.email || user.email,
             profileImageUrl: response.profile_picture || user.profileImageUrl,
             theme: response.theme_preference || user.theme,
             emailVerified: response.email_verified !== undefined ? response.email_verified : user.emailVerified
@@ -504,6 +507,7 @@ class AuthService {
 
       let response = null;
       let lastError = null;
+      let responseData = null;
 
       // Try each endpoint until one works
       for (const endpoint of endpoints) {
@@ -578,15 +582,47 @@ class AuthService {
       // If we have a successful response, parse and return the data
       if (response && response.ok) {
         try {
-          const data = await response.json();
-          console.debug('Profile image upload response:', data);
-          return data;
+          responseData = await response.json();
+          console.debug('Profile image upload response:', responseData);
         } catch (jsonError) {
           console.warn('Error parsing JSON response:', jsonError);
-          // If we can't parse JSON but the request was successful, return a basic success object
-          return {
+          // If we can't parse JSON but the request was successful, create a basic success object
+          responseData = {
             success: true,
             message: 'Profile image uploaded successfully'
+          };
+        }
+
+        // After successful upload, fetch the updated user profile to ensure we have the latest data
+        try {
+          console.info('Fetching updated user profile after image upload');
+          const updatedProfile = await this.apiService.get('api/users/profile/', true);
+          console.debug('Updated profile after image upload:', updatedProfile);
+
+          // Return the complete user profile data
+          return {
+            id: updatedProfile.pk || updatedProfile.id || '',
+            firstName: updatedProfile.first_name || '',
+            lastName: updatedProfile.last_name || '',
+            email: updatedProfile.email || '',
+            username: updatedProfile.username || updatedProfile.email || '',
+            profileImageUrl: updatedProfile.profile_picture || null,
+            theme: updatedProfile.theme_preference || 'system',
+            emailVerified: updatedProfile.email_verified || false
+          };
+        } catch (profileError) {
+          console.warn('Error fetching updated profile after image upload:', profileError);
+
+          // If we can't fetch the updated profile, return what we have from the upload response
+          return {
+            id: responseData.pk || responseData.id || '',
+            firstName: responseData.first_name || '',
+            lastName: responseData.last_name || '',
+            email: responseData.email || '',
+            username: responseData.username || responseData.email || '',
+            profileImageUrl: responseData.profile_picture || null,
+            theme: responseData.theme_preference || 'system',
+            emailVerified: responseData.email_verified || false
           };
         }
       } else {
@@ -610,26 +646,15 @@ class AuthService {
     try {
       console.info('Updating theme preference to:', theme);
 
+      let response;
       // Try the custom endpoint first with PATCH
       try {
-        const response = await this.apiService.patch('api/users/profile/theme/', {
+        response = await this.apiService.patch('api/users/profile/theme/', {
           theme_preference: theme,
         }, true, user);
 
         console.info('Theme preference updated successfully');
         console.debug('Response from server:', response);
-
-        // Return user data
-        return {
-          id: response.pk || response.id || user.id,
-          firstName: response.first_name || user.firstName,
-          lastName: response.last_name || user.lastName,
-          email: response.email || user.email,
-          username: response.username || user.email,
-          profileImageUrl: response.profile_picture || user.profileImageUrl,
-          theme: response.theme_preference || theme,
-          emailVerified: response.email_verified !== undefined ? response.email_verified : user.emailVerified
-        };
       } catch (error) {
         // If that fails, try updating the whole profile with PATCH
         console.warn('Failed to update theme with custom endpoint:', error);
@@ -642,18 +667,39 @@ class AuthService {
 
         console.debug('User data being sent to backend:', userData);
 
-        const response = await this.apiService.patch('api/users/profile/', userData, true, user);
+        response = await this.apiService.patch('api/users/profile/', userData, true, user);
 
         console.info('Theme preference updated successfully with full profile update');
         console.debug('Response from server:', response);
+      }
 
-        // Return user data
+      // After successful update, fetch the updated user profile to ensure we have the latest data
+      try {
+        console.info('Fetching updated user profile after theme update');
+        const updatedProfile = await this.apiService.get('api/users/profile/', true);
+        console.debug('Updated profile after theme update:', updatedProfile);
+
+        // Return the complete user profile data
+        return {
+          id: updatedProfile.pk || updatedProfile.id || user.id,
+          firstName: updatedProfile.first_name || user.firstName,
+          lastName: updatedProfile.last_name || user.lastName,
+          email: updatedProfile.email || user.email,
+          username: updatedProfile.username || updatedProfile.email || user.email,
+          profileImageUrl: updatedProfile.profile_picture || user.profileImageUrl,
+          theme: updatedProfile.theme_preference || theme,
+          emailVerified: updatedProfile.email_verified !== undefined ? updatedProfile.email_verified : user.emailVerified
+        };
+      } catch (profileError) {
+        console.warn('Error fetching updated profile after theme update:', profileError);
+
+        // If we can't fetch the updated profile, return what we have from the update response
         return {
           id: response.pk || response.id || user.id,
           firstName: response.first_name || user.firstName,
           lastName: response.last_name || user.lastName,
           email: response.email || user.email,
-          username: response.username || user.email,
+          username: response.username || response.email || user.email,
           profileImageUrl: response.profile_picture || user.profileImageUrl,
           theme: response.theme_preference || theme,
           emailVerified: response.email_verified !== undefined ? response.email_verified : user.emailVerified
