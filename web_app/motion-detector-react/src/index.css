@@ -1,0 +1,93 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Light mode (default) */
+:root {
+  --color-primary: #646cff;
+  --color-secondary: #535bf2;
+  --color-background: #ffffff;
+  --color-surface: #f9f9f9;
+  --color-text: #213547;
+  --color-text-secondary: #666666;
+  --color-error: #d32f2f;
+  --color-divider: #e0e0e0;
+}
+
+/* Dark mode */
+body.dark {
+  --color-primary: #747bff;
+  --color-secondary: #646cff;
+  --color-background: #242424;
+  --color-surface: #1a1a1a;
+  --color-text: rgba(255, 255, 255, 0.87);
+  --color-text-secondary: #a0a0a0;
+  --color-error: #f44336;
+  --color-divider: #333333;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+a {
+  font-weight: 500;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-secondary);
+}
+
+h1 {
+  font-size: 2em;
+  line-height: 1.1;
+}
+
+h2 {
+  font-size: 1.5em;
+  line-height: 1.2;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input, button, textarea, select {
+  font: inherit;
+}
+
+/* Remove default button styles */
+button.unstyled {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Mobile-first responsive design */
+@media (min-width: 768px) {
+  /* Tablet and desktop styles */
+}
