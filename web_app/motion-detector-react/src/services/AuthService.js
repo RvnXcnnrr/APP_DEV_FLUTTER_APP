@@ -1,6 +1,7 @@
 /**
  * Service for handling authentication
  */
+import AppConfig from '../utils/config';
 
 class AuthService {
   /**
@@ -382,9 +383,11 @@ class AuthService {
 
         console.debug('User data being sent to backend:', userData);
 
+        // For Netlify deployments, we need to handle CORS differently
         // First try the dj-rest-auth endpoint with PATCH (partial update)
         try {
-          const response = await this.apiService.patch('api/auth/user/', userData);
+          // Add user object to the request for email header
+          const response = await this.apiService.patch('api/auth/user/', userData, true, user);
 
           console.info('Profile updated successfully with dj-rest-auth endpoint');
           console.debug('Response from server:', response);
@@ -405,7 +408,7 @@ class AuthService {
           console.warn('Failed to update profile with dj-rest-auth endpoint:', error);
           console.info('Trying custom endpoint...');
 
-          const response = await this.apiService.patch('api/users/profile/', userData);
+          const response = await this.apiService.patch('api/users/profile/', userData, true, user);
 
           console.info('Profile updated successfully with custom endpoint');
           console.debug('Response from server:', response);
@@ -446,7 +449,8 @@ class AuthService {
 
       // Create headers for multipart/form-data
       const headers = {
-        'Authorization': `Token ${token}`,
+        // Check if it's a JWT token (has 3 parts separated by dots)
+        'Authorization': token.split('.').length === 3 ? `Bearer ${token}` : `Token ${token}`,
         // Don't set Content-Type for FormData, browser will set it with boundary
       };
 
@@ -464,6 +468,29 @@ class AuthService {
       }
 
       console.debug('Headers for image upload:', headers);
+
+      // Check if we're running on Netlify
+      const isNetlify = window.location.hostname.includes('netlify');
+
+      // For Netlify deployments, we need to handle CORS differently
+      if (isNetlify) {
+        // Add special header for Netlify deployments
+        headers['X-Requested-With'] = 'XMLHttpRequest';
+
+        // Add user email header if available
+        try {
+          const storedUser = localStorage.getItem('user_data');
+          if (storedUser) {
+            const userData = JSON.parse(storedUser);
+            if (userData.email) {
+              headers['X-User-Email'] = userData.email;
+              console.debug('Added user email header for profile image upload:', userData.email);
+            }
+          }
+        } catch (error) {
+          console.warn('Error getting user email from localStorage:', error);
+        }
+      }
 
       // Try multiple endpoints in sequence
       const endpoints = [
@@ -491,12 +518,14 @@ class AuthService {
             const url = `${this.apiService.baseUrl}/${endpoint}`;
             console.debug(`Uploading to: ${url} with method: ${method}`);
 
+            // For Netlify deployment, don't use credentials: 'include' to avoid CORS issues
+            const isNetlify = window.location.hostname.includes('netlify');
             response = await fetch(url, {
               method: method,
               headers,
               body: formData,
               mode: 'cors',
-              credentials: 'include',
+              credentials: isNetlify ? 'omit' : 'include',
             });
 
             console.debug(`Response status from ${endpoint}:`, response.status);
@@ -515,12 +544,14 @@ class AuthService {
             const directUrl = `${AppConfig.directApiBaseUrl}/${endpoint}`;
             console.debug(`Making direct API call to: ${directUrl}`);
 
+            // For Netlify deployment, don't use credentials: 'include' to avoid CORS issues
+            const isNetlify = window.location.hostname.includes('netlify');
             response = await fetch(directUrl, {
               method: method,
               headers,
               body: formData,
               mode: 'cors',
-              credentials: 'include',
+              credentials: isNetlify ? 'omit' : 'include',
             });
 
             console.debug(`Direct API call response status from ${endpoint}:`, response.status);
@@ -583,7 +614,7 @@ class AuthService {
       try {
         const response = await this.apiService.patch('api/users/profile/theme/', {
           theme_preference: theme,
-        });
+        }, true, user);
 
         console.info('Theme preference updated successfully');
         console.debug('Response from server:', response);
@@ -611,7 +642,7 @@ class AuthService {
 
         console.debug('User data being sent to backend:', userData);
 
-        const response = await this.apiService.patch('api/users/profile/', userData);
+        const response = await this.apiService.patch('api/users/profile/', userData, true, user);
 
         console.info('Theme preference updated successfully with full profile update');
         console.debug('Response from server:', response);
