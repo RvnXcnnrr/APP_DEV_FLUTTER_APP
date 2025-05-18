@@ -84,11 +84,66 @@ class ProfilePictureUpdateView(generics.UpdateAPIView):
     def get_object(self):
         return self.request.user
 
+    def convert_image_to_jpeg(self, image_file):
+        """
+        Convert any image format to JPEG to ensure compatibility
+        """
+        try:
+            print(f"Converting image: {image_file.name}, size: {image_file.size}, content_type: {image_file.content_type}")
+
+            # Open the uploaded image
+            img = Image.open(image_file)
+
+            # Convert to RGB if needed (for PNG with transparency, etc.)
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+
+            # Create an in-memory file
+            output = io.BytesIO()
+
+            # Save as JPEG
+            img.save(output, format='JPEG', quality=85)
+            output.seek(0)
+
+            # Create a new InMemoryUploadedFile
+            converted_file = InMemoryUploadedFile(
+                output,
+                'profile_picture',
+                f"{os.path.splitext(image_file.name)[0]}.jpg",
+                'image/jpeg',
+                sys.getsizeof(output),
+                None
+            )
+
+            print(f"Conversion successful. New size: {converted_file.size}, content_type: {converted_file.content_type}")
+            return converted_file
+        except Exception as e:
+            print(f"Error converting image: {e}")
+            import traceback
+            traceback.print_exc()
+            return image_file  # Return original file if conversion fails
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
+
+        # Check if there's an image file in the request
+        if 'profile_picture' in request.data and request.data['profile_picture']:
+            try:
+                # Convert the image to JPEG
+                request.data['profile_picture'] = self.convert_image_to_jpeg(request.data['profile_picture'])
+                print(f"Image converted successfully")
+            except Exception as e:
+                print(f"Error processing image: {e}")
+                import traceback
+                traceback.print_exc()
+
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
+
+        if not serializer.is_valid():
+            print(f"Serializer validation errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         self.perform_update(serializer)
 
         return Response(serializer.data)
