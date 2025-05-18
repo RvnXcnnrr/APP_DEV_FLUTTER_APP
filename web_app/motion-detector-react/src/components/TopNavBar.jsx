@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaMoon, FaSun, FaSignOutAlt, FaTimes } from 'react-icons/fa';
+import { FaMoon, FaSun, FaSignOutAlt, FaTimes, FaUser } from 'react-icons/fa';
 import { useTheme } from '../context/ThemeContext';
 import { useUser } from '../context/UserContext';
 import { getTheme } from '../utils/theme';
+import ProfileModal from './ProfileModal';
 
 /**
  * Top navigation bar component
@@ -11,8 +12,9 @@ import { getTheme } from '../utils/theme';
  */
 const TopNavBar = ({ title }) => {
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const { isDarkMode, toggleDarkMode } = useTheme();
-  const { logout } = useUser();
+  const { logout, user } = useUser();
   const navigate = useNavigate();
   const theme = getTheme(isDarkMode);
 
@@ -31,6 +33,46 @@ const TopNavBar = ({ title }) => {
       <h1 style={{ margin: 0, fontSize: '20px' }}>{title}</h1>
 
       <div style={{ display: 'flex', gap: '15px' }}>
+        {/* Profile button */}
+        <button
+          onClick={() => setShowProfileModal(true)}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: theme.text,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+          }}
+          aria-label="View Profile"
+        >
+          {user && user.profileImageUrl ? (
+            <div
+              style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                overflow: 'hidden',
+                border: `1px solid ${theme.divider}`,
+              }}
+            >
+              <img
+                src={user.profileImageUrl}
+                alt="Profile"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              />
+            </div>
+          ) : (
+            <FaUser size={20} />
+          )}
+        </button>
+
         {/* Theme toggle button */}
         <button
           onClick={toggleDarkMode}
@@ -65,6 +107,16 @@ const TopNavBar = ({ title }) => {
           <FaSignOutAlt size={20} />
         </button>
       </div>
+
+      {/* Profile Modal */}
+      {showProfileModal && (
+        <ProfileModal
+          onClose={() => setShowProfileModal(false)}
+          user={user}
+          isDarkMode={isDarkMode}
+          toggleDarkMode={toggleDarkMode}
+        />
+      )}
 
       {/* Logout confirmation dialog */}
       {showLogoutConfirmation && (

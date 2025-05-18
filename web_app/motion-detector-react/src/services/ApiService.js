@@ -571,6 +571,139 @@ class ApiService {
       throw error;
     }
   }
+
+  /**
+   * Makes a PATCH request to the API
+   * @param {string} endpoint - The API endpoint
+   * @param {Object} data - The request data
+   * @param {boolean} requiresAuth - Whether the request requires authentication
+   * @param {Object} user - The current user object (optional)
+   * @returns {Promise<any>} The response data
+   */
+  async patch(endpoint, data, requiresAuth = true, user = null) {
+    try {
+      // Try to fetch a CSRF token first if we don't have one
+      if (!this.getCsrfToken()) {
+        await this.fetchCsrfToken();
+      }
+
+      const headers = this.getHeaders(requiresAuth, user);
+
+      // Always add Origin header for CORS
+      headers['Origin'] = window.location.origin;
+
+      console.debug(`PATCH request to: ${this.baseUrl}/${endpoint}`);
+      console.debug('Headers:', headers);
+      console.debug('Body:', JSON.stringify(data));
+
+      // Add a timestamp to the request for debugging
+      console.debug('Request timestamp:', new Date().toISOString());
+
+      // First try with the proxy approach
+      let response;
+      try {
+        response = await fetch(`${this.baseUrl}/${endpoint}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify(data),
+          mode: 'cors', // Explicitly set CORS mode
+          credentials: 'include', // Include cookies if needed
+        });
+
+        console.debug('Response status:', response.status);
+        console.debug('Response headers:', Object.fromEntries([...response.headers.entries()]));
+      } catch (proxyError) {
+        console.warn('Proxy request failed:', proxyError.message);
+
+        // If proxy fails, try direct API call
+        console.warn('Trying direct API call as fallback...');
+
+        // Try a direct API call without proxy
+        const directUrl = endpoint.startsWith('api/')
+          ? `${AppConfig.directApiBaseUrl}/${endpoint}`
+          : `${AppConfig.directApiBaseUrl}/api/${endpoint}`;
+
+        console.debug(`Making direct API call to: ${directUrl}`);
+
+        response = await fetch(directUrl, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify(data),
+          mode: 'cors',
+          credentials: 'include',
+        });
+
+        console.debug('Direct API call response status:', response.status);
+        console.debug('Direct API call response headers:', Object.fromEntries([...response.headers.entries()]));
+      }
+
+      console.debug('Response timestamp:', new Date().toISOString());
+
+      // Check if we got a CSRF error
+      if (response.status === 403) {
+        const responseText = await response.text();
+        console.debug('Response text for 403:', responseText);
+
+        if (responseText.includes('CSRF')) {
+          console.warn('CSRF error detected, trying direct API call with modified headers');
+
+          // Try a direct API call without proxy and with modified headers
+          const directUrl = endpoint.startsWith('api/')
+            ? `${AppConfig.directApiBaseUrl}/${endpoint}`
+            : `${AppConfig.directApiBaseUrl}/api/${endpoint}`;
+
+          console.debug(`Retrying with direct API call to: ${directUrl}`);
+
+          // Add X-Requested-With header which can bypass some CSRF checks
+          headers['X-Requested-With'] = 'XMLHttpRequest';
+
+          const directResponse = await fetch(directUrl, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify(data),
+            mode: 'cors',
+            credentials: 'include',
+          });
+
+          return this.handleResponse(directResponse);
+        }
+
+        // If it's a 403 but not CSRF, create a new response with the text
+        const errorResponse = new Response(responseText, {
+          status: 403,
+          statusText: 'Forbidden',
+          headers: response.headers
+        });
+
+        return this.handleResponse(errorResponse);
+      }
+
+      return this.handleResponse(response);
+    } catch (error) {
+      console.error('Network error during PATCH request:', error);
+
+      // Log more detailed information about the error
+      console.info('Request details:');
+      console.info('- Base URL:', this.baseUrl);
+      console.info('- Endpoint:', endpoint);
+      console.info('- Has token:', !!this.getToken());
+
+      // Provide more helpful error messages based on the error type
+      if (error.message === 'Failed to fetch') {
+        throw new Error(`Network error: Could not connect to the server. Please check:\n1. Your internet connection\n2. If the backend at ${this.baseUrl || 'https://app-dev-flutter-app.onrender.com'} is running\n3. If there are any firewall or network restrictions`);
+      }
+
+      if (error.message.includes('CORS')) {
+        throw new Error(`CORS error: The server is not configured to accept requests from ${window.location.origin}. Please check the CORS settings on the backend as described in the 'cors_network_solution_guide.md' file.`);
+      }
+
+      if (error.message.includes('CSRF')) {
+        throw new Error(`CSRF validation failed. Please follow the instructions in the 'cors_network_solution_guide.md' file to update your Render deployment settings.`);
+      }
+
+      throw error;
+    }
+  }
 }
 
 export default ApiService;

@@ -323,6 +323,137 @@ class AuthService {
   }
 
   /**
+   * Updates the user's profile
+   * @param {Object} user - The user object with updated fields
+   * @returns {Promise<Object>} The updated user profile
+   */
+  async updateProfile(user) {
+    try {
+      console.info('Updating user profile:', user.firstName, user.lastName);
+
+      // Create a map with ONLY the fields we want to update
+      // Explicitly exclude username and email to avoid validation errors
+      const userData = {
+        first_name: user.firstName,
+        last_name: user.lastName,
+        theme_preference: user.theme,
+        // Don't include email or username fields
+      };
+
+      console.debug('User data being sent to backend:', userData);
+
+      // First try the dj-rest-auth endpoint with PATCH (partial update)
+      try {
+        const response = await this.apiService.patch('api/auth/user/', userData);
+
+        console.info('Profile updated successfully with dj-rest-auth endpoint');
+        console.debug('Response from server:', response);
+
+        // Return user data
+        return {
+          id: response.pk || response.id || user.id,
+          firstName: response.first_name || user.firstName,
+          lastName: response.last_name || user.lastName,
+          email: response.email || user.email,
+          username: response.username || user.email,
+          profileImageUrl: response.profile_picture || user.profileImageUrl,
+          theme: response.theme_preference || user.theme,
+          emailVerified: response.email_verified !== undefined ? response.email_verified : user.emailVerified
+        };
+      } catch (error) {
+        // If that fails, try the custom endpoint with PATCH
+        console.warn('Failed to update profile with dj-rest-auth endpoint:', error);
+        console.info('Trying custom endpoint...');
+
+        const response = await this.apiService.patch('api/users/profile/', userData);
+
+        console.info('Profile updated successfully with custom endpoint');
+        console.debug('Response from server:', response);
+
+        // Return user data
+        return {
+          id: response.pk || response.id || user.id,
+          firstName: response.first_name || user.firstName,
+          lastName: response.last_name || user.lastName,
+          email: response.email || user.email,
+          username: response.username || user.email,
+          profileImageUrl: response.profile_picture || user.profileImageUrl,
+          theme: response.theme_preference || user.theme,
+          emailVerified: response.email_verified !== undefined ? response.email_verified : user.emailVerified
+        };
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw new Error('Failed to update profile. Please try again later.');
+    }
+  }
+
+  /**
+   * Updates the user's theme preference
+   * @param {Object} user - The user object
+   * @param {string} theme - The new theme preference
+   * @returns {Promise<Object>} The updated user profile
+   */
+  async updateThemePreference(user, theme) {
+    try {
+      console.info('Updating theme preference to:', theme);
+
+      // Try the custom endpoint first with PATCH
+      try {
+        const response = await this.apiService.patch('api/users/profile/theme/', {
+          theme_preference: theme,
+        });
+
+        console.info('Theme preference updated successfully');
+        console.debug('Response from server:', response);
+
+        // Return user data
+        return {
+          id: response.pk || response.id || user.id,
+          firstName: response.first_name || user.firstName,
+          lastName: response.last_name || user.lastName,
+          email: response.email || user.email,
+          username: response.username || user.email,
+          profileImageUrl: response.profile_picture || user.profileImageUrl,
+          theme: response.theme_preference || theme,
+          emailVerified: response.email_verified !== undefined ? response.email_verified : user.emailVerified
+        };
+      } catch (error) {
+        // If that fails, try updating the whole profile with PATCH
+        console.warn('Failed to update theme with custom endpoint:', error);
+        console.info('Trying to update full profile...');
+
+        // Create a map with ONLY the fields we want to update
+        const userData = {
+          theme_preference: theme,
+        };
+
+        console.debug('User data being sent to backend:', userData);
+
+        const response = await this.apiService.patch('api/users/profile/', userData);
+
+        console.info('Theme preference updated successfully with full profile update');
+        console.debug('Response from server:', response);
+
+        // Return user data
+        return {
+          id: response.pk || response.id || user.id,
+          firstName: response.first_name || user.firstName,
+          lastName: response.last_name || user.lastName,
+          email: response.email || user.email,
+          username: response.username || user.email,
+          profileImageUrl: response.profile_picture || user.profileImageUrl,
+          theme: response.theme_preference || theme,
+          emailVerified: response.email_verified !== undefined ? response.email_verified : user.emailVerified
+        };
+      }
+    } catch (error) {
+      console.error('Error updating theme preference:', error);
+      throw new Error('Failed to update theme preference. Please try again later.');
+    }
+  }
+
+  /**
    * Logs out the current user
    * @returns {Promise<void>}
    */

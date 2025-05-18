@@ -15,6 +15,7 @@ import { useUser } from '../context/UserContext';
 import { useMotionEvents } from '../context/MotionEventContext';
 import { getTheme } from '../utils/theme';
 import TopNavBar from '../components/TopNavBar';
+import DeviceService from '../services/DeviceService';
 
 /**
  * Dashboard page component
@@ -38,8 +39,32 @@ const DashboardPage = () => {
     isDeviceOwner
   } = useMotionEvents();
 
-  // Check if user is the owner of ESP32_001 (email check handled internally)
-  const isESP32Owner = user && user.email && deviceService && deviceService.isDeviceOwner('ESP32_001', user);
+  // Create device service instance
+  const [deviceService] = useState(() => {
+    // Use the global apiService if available
+    if (window.apiService) {
+      return new DeviceService(window.apiService);
+    }
+    return null;
+  });
+
+  // State for device ownership
+  const [isESP32Owner, setIsESP32Owner] = useState(false);
+
+  // Check device ownership when user changes
+  useEffect(() => {
+    const checkDeviceOwnership = async () => {
+      if (user && user.email && deviceService) {
+        const isOwner = await deviceService.isDeviceOwner('ESP32_001', user);
+        setIsESP32Owner(isOwner);
+        console.log(`User ${user.email} ${isOwner ? 'is' : 'is not'} the owner of device ESP32_001`);
+      } else {
+        setIsESP32Owner(false);
+      }
+    };
+
+    checkDeviceOwnership();
+  }, [user, deviceService]);
 
   const theme = getTheme(isDarkMode);
 

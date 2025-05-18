@@ -188,6 +188,100 @@ export function UserProvider({ children, authService }) {
     }
   }, [authService]);
 
+  // Update the user's profile
+  const updateProfile = useCallback(async (updatedUser) => {
+    if (!authService) {
+      console.error('AuthService not provided to UserProvider');
+      throw new Error('Authentication service not available');
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      console.log('Starting profile update process...');
+      console.log('Updated user data:', updatedUser);
+
+      // Update profile with the auth service
+      const userData = await authService.updateProfile(updatedUser);
+
+      // Create user object
+      const user = new User(
+        userData.id,
+        userData.firstName,
+        userData.lastName,
+        userData.email,
+        userData.username,
+        userData.profileImageUrl,
+        userData.theme,
+        userData.emailVerified
+      );
+
+      // Store user in state
+      setUser(user);
+
+      console.log('Profile updated successfully:', user);
+
+      return user;
+    } catch (error) {
+      console.error('Profile update error in UserContext:', error);
+
+      // Set the error message
+      setError(error.message || 'Profile update failed');
+
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [authService]);
+
+  // Update the user's theme preference
+  const updateThemePreference = useCallback(async (theme) => {
+    if (!authService || !user) {
+      console.error('AuthService not provided or no user logged in');
+      throw new Error('Authentication service not available or no user logged in');
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      console.log('Starting theme update process...');
+      console.log('New theme:', theme);
+
+      // Update theme with the auth service
+      const userData = await authService.updateThemePreference(user, theme);
+
+      // Create user object
+      const updatedUser = new User(
+        userData.id,
+        userData.firstName,
+        userData.lastName,
+        userData.email,
+        userData.username,
+        userData.profileImageUrl,
+        userData.theme,
+        userData.emailVerified
+      );
+
+      // Store user in state
+      setUser(updatedUser);
+
+      console.log('Theme updated successfully:', updatedUser);
+
+      return updatedUser;
+    } catch (error) {
+      console.error('Theme update error in UserContext:', error);
+
+      // Set the error message
+      setError(error.message || 'Theme update failed');
+
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [authService, user]);
+
   // Context value
   const value = {
     user,
@@ -198,6 +292,8 @@ export function UserProvider({ children, authService }) {
     register,
     login,
     logout,
+    updateProfile,
+    updateThemePreference,
     setError
   };
 
