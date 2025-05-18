@@ -122,9 +122,14 @@ class ApiService {
 
         // Special case for device owners - check handled internally
         if (this.isSpecialDeviceOwner(user.email)) {
-          // Add additional headers to help with authentication
-          headers['X-Device-Owner'] = 'true';
-          console.debug('Added device owner header for special device');
+          // For Netlify deployment, don't add custom headers that might cause CORS issues
+          if (!window.location.hostname.includes('netlify')) {
+            // Add additional headers to help with authentication
+            headers['X-Device-Owner'] = 'true';
+            console.debug('Added device owner header for special device');
+          } else {
+            console.debug('Skipping device owner header for Netlify deployment to avoid CORS issues');
+          }
         }
       } else {
         // Try to get email from localStorage if user object not provided
@@ -138,9 +143,14 @@ class ApiService {
 
               // Special case for device owners - check handled internally
               if (this.isSpecialDeviceOwner(userData.email)) {
-                // Add additional headers to help with authentication
-                headers['X-Device-Owner'] = 'true';
-                console.debug('Added device owner header for special device (from localStorage)');
+                // For Netlify deployment, don't add custom headers that might cause CORS issues
+                if (!window.location.hostname.includes('netlify')) {
+                  // Add additional headers to help with authentication
+                  headers['X-Device-Owner'] = 'true';
+                  console.debug('Added device owner header for special device (from localStorage)');
+                } else {
+                  console.debug('Skipping device owner header for Netlify deployment to avoid CORS issues');
+                }
               }
             }
           }

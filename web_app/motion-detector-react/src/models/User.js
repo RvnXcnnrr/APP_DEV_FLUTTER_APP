@@ -28,7 +28,15 @@ class User {
     this.lastName = lastName;
     this.email = email;
     this.username = username || email; // Default username to email if not provided
-    this.profileImageUrl = profileImageUrl;
+
+    // Ensure profile image URL uses HTTPS
+    if (profileImageUrl && profileImageUrl.startsWith('http:')) {
+      this.profileImageUrl = profileImageUrl.replace('http:', 'https:');
+      console.debug('Converted profile image URL from HTTP to HTTPS');
+    } else {
+      this.profileImageUrl = profileImageUrl;
+    }
+
     this.theme = theme;
     this.emailVerified = emailVerified;
   }
@@ -57,13 +65,22 @@ class User {
    * @returns {User} A new user
    */
   static fromJson(json) {
+    // Get profile image URL
+    let profileImageUrl = json.profile_picture || json.profileImageUrl || null;
+
+    // Ensure profile image URL uses HTTPS
+    if (profileImageUrl && profileImageUrl.startsWith('http:')) {
+      profileImageUrl = profileImageUrl.replace('http:', 'https:');
+      console.debug('Converted profile image URL from HTTP to HTTPS in fromJson');
+    }
+
     return new User(
       json.id || json.pk || '',
       json.first_name || json.firstName || '',
       json.last_name || json.lastName || '',
       json.email || '',
       json.username || json.email || '',
-      json.profile_picture || json.profileImageUrl || null,
+      profileImageUrl,
       json.theme_preference || json.theme || 'system',
       json.email_verified || json.emailVerified || false
     );
