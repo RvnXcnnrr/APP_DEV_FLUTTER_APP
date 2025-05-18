@@ -101,6 +101,31 @@ npm run build
 
 The build artifacts will be stored in the `dist/` directory.
 
+## Deployment to Netlify
+
+This project is configured for deployment on Netlify.
+
+### Deployment Configuration
+
+- **Project Name**: motiondetectorappdev
+- **Team**: Burger town
+- **Branch to Deploy**: main
+- **Base Directory**: web_app/motion-detector-react
+- **Build Command**: npm run build
+- **Publish Directory**: dist
+- **Functions Directory**: netlify/functions
+
+### Environment Variables
+
+The following environment variables should be set in Netlify:
+
+- `VITE_API_BASE_URL`: https://app-dev-flutter-app.onrender.com
+- `VITE_WS_BASE_URL`: wss://app-dev-flutter-app.onrender.com/ws/sensors/
+
+### Deployment URL
+
+The app is deployed at: https://motiondetectorappdev.netlify.app
+
 ## Technologies Used
 
 - React 18

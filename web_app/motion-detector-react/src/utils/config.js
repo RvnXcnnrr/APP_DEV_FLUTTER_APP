@@ -32,10 +32,10 @@ const config = {
   },
   // Production environment
   production: {
-    apiBaseUrl: 'https://app-dev-flutter-app.onrender.com',
-    wsBaseUrl: 'wss://app-dev-flutter-app.onrender.com/ws/sensors/',
-    directApiBaseUrl: 'https://app-dev-flutter-app.onrender.com',
-    directWsBaseUrl: 'wss://app-dev-flutter-app.onrender.com/ws/sensors/',
+    apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'https://app-dev-flutter-app.onrender.com',
+    wsBaseUrl: import.meta.env.VITE_WS_BASE_URL || 'wss://app-dev-flutter-app.onrender.com/ws/sensors/',
+    directApiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'https://app-dev-flutter-app.onrender.com',
+    directWsBaseUrl: import.meta.env.VITE_WS_BASE_URL || 'wss://app-dev-flutter-app.onrender.com/ws/sensors/',
   },
 };
 
