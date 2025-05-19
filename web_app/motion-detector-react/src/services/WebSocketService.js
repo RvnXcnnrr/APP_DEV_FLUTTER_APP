@@ -259,8 +259,24 @@ class WebSocketService {
    * @returns {Object} The processed motion event
    */
   processMotionEvent(data) {
-    // Convert timestamp to Date object
-    const timestamp = data.timestamp ? new Date(data.timestamp) : new Date();
+    // Convert timestamp to Date object with validation
+    let timestamp;
+    if (data.timestamp) {
+      try {
+        timestamp = new Date(data.timestamp);
+        // Check if date is valid
+        if (isNaN(timestamp.getTime())) {
+          console.warn('Invalid timestamp received:', data.timestamp);
+          // Use current time as fallback
+          timestamp = new Date();
+        }
+      } catch (error) {
+        console.warn('Error parsing timestamp:', error);
+        timestamp = new Date();
+      }
+    } else {
+      timestamp = new Date();
+    }
 
     // Create a unique ID if none is provided
     const id = data.id || `event_${Date.now()}`;
@@ -281,19 +297,67 @@ class WebSocketService {
    * @returns {Object} The processed sensor data
    */
   processSensorData(data) {
-    // Convert timestamp to Date object
-    const timestamp = data.timestamp ? new Date(data.timestamp) : new Date();
+    // Convert timestamp to Date object with validation
+    let timestamp;
+    if (data.timestamp) {
+      try {
+        timestamp = new Date(data.timestamp);
+        // Check if date is valid
+        if (isNaN(timestamp.getTime())) {
+          console.warn('Invalid timestamp in sensor data:', data.timestamp);
+          // Use current time as fallback
+          timestamp = new Date();
+        }
+      } catch (error) {
+        console.warn('Error parsing sensor data timestamp:', error);
+        timestamp = new Date();
+      }
+    } else {
+      timestamp = new Date();
+    }
+
+    // Process temperature with validation
+    let temperature = data.temperature;
+    if (typeof temperature === 'string') {
+      try {
+        temperature = parseFloat(temperature);
+        if (isNaN(temperature)) {
+          console.warn('Invalid temperature value:', data.temperature);
+          temperature = null;
+        }
+      } catch (error) {
+        console.warn('Error parsing temperature:', error);
+        temperature = null;
+      }
+    }
+
+    // Process humidity with validation
+    let humidity = data.humidity;
+    if (typeof humidity === 'string') {
+      try {
+        humidity = parseFloat(humidity);
+        if (isNaN(humidity)) {
+          console.warn('Invalid humidity value:', data.humidity);
+          humidity = null;
+        }
+      } catch (error) {
+        console.warn('Error parsing humidity:', error);
+        humidity = null;
+      }
+    }
 
     // Return processed data
     return {
       ...data,
       timestamp,
-      temperature: typeof data.temperature === 'string' ? parseFloat(data.temperature) : data.temperature,
-      humidity: typeof data.humidity === 'string' ? parseFloat(data.humidity) : data.humidity,
+      temperature,
+      humidity,
       // Add a unique ID for easier tracking
-      id: `sensor_${Date.now()}`,
+      id: data.id || `sensor_${Date.now()}`,
       // Add received time for display purposes
       receivedAt: new Date(),
+      // Ensure device_id is set
+      device_id: data.device_id || 'ESP32_001'
     };
   }
 

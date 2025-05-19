@@ -150,7 +150,7 @@ export function MotionEventProvider({ children, motionEventService }) {
         // Ensure timestamp is a Date object
         timestamp: latestMotionEvent.timestamp instanceof Date
           ? latestMotionEvent.timestamp
-          : new Date(latestMotionEvent.timestamp),
+          : new Date(),
         // Ensure temperature and humidity are numbers
         temperature: typeof latestMotionEvent.temperature === 'string'
           ? parseFloat(latestMotionEvent.temperature)
@@ -159,80 +159,120 @@ export function MotionEventProvider({ children, motionEventService }) {
           ? parseFloat(latestMotionEvent.humidity)
           : latestMotionEvent.humidity,
         // Ensure device_id is set
-        device_id: latestMotionEvent.device_id || 'ESP32_001'
+        device_id: latestMotionEvent.device_id || 'ESP32_001',
+        // Add a unique ID if not present
+        id: latestMotionEvent.id || `event_${Date.now()}`
       };
 
-      // Add the new event to the events list if it's for the selected day
-      setEvents(prevEvents => {
-        // Check if the event is already in the list
-        const eventExists = prevEvents.some(event =>
-          event.id === processedEvent.id ||
-          (event.timestamp && processedEvent.timestamp &&
-           event.timestamp.getTime() === processedEvent.timestamp.getTime())
-        );
+      console.info('Processed event:', processedEvent);
 
-        if (eventExists) {
-          return prevEvents;
-        }
+      // Force reload events for the current day to include the new event
+      if (motionEventService) {
+        console.info('Reloading events to include new real-time event');
 
-        // Add the new event to the list
-        const newEvents = [...prevEvents, processedEvent];
+        // Get the current date
+        const today = new Date();
 
-        // Sort by timestamp (newest first)
-        newEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        // Reload events for today
+        motionEventService.getMotionEventsForDay(today, user)
+          .then(updatedEvents => {
+            console.info('Successfully reloaded events, count:', updatedEvents.length);
+            setEvents(updatedEvents);
+            setLastUpdated(new Date());
 
-        console.info('Updated events list with new real-time event, total events:', newEvents.length);
-        return newEvents;
-      });
+            // Also update month events
+            return motionEventService.getMotionEventsForMonth(
+              today.getFullYear(),
+              today.getMonth() + 1,
+              user
+            );
+          })
+          .then(monthEvents => {
+            if (monthEvents && monthEvents.length > 0) {
+              const groupedEvents = motionEventService.groupEventsByDay(monthEvents);
+              setMonthEvents(groupedEvents);
+            }
+          })
+          .catch(error => {
+            console.error('Error reloading events:', error);
 
-      // Update the month events
-      setMonthEvents(prevMonthEvents => {
-        // Create a date key for the event
-        const date = new Date(processedEvent.timestamp);
-        const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
-        // Get the events for this day
-        const dayEvents = prevMonthEvents[dateKey] || [];
-
-        // Check if the event is already in the list
-        const eventExists = dayEvents.some(event =>
-          event.id === processedEvent.id ||
-          (event.timestamp && processedEvent.timestamp &&
-           event.timestamp.getTime() === processedEvent.timestamp.getTime())
-        );
-
-        if (eventExists) {
-          return prevMonthEvents;
-        }
-
-        // Add the new event to the list
-        const newDayEvents = [...dayEvents, processedEvent];
-
-        // Sort by timestamp (newest first)
-        newDayEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-        console.info('Updated month events with new real-time event for date:', dateKey);
-
-        // Return the updated month events
-        return {
-          ...prevMonthEvents,
-          [dateKey]: newDayEvents
-        };
-      });
-
-      // Update the last updated timestamp without triggering loading state
-      setLastUpdated(new Date());
-
-      // Play a subtle notification sound for real-time events (optional)
-      try {
-        const audio = new Audio('/notification.mp3');
-        audio.volume = 0.3; // Set volume to 30%
-        audio.play().catch(e => console.log('Audio play failed:', e));
-      } catch (error) {
-        console.log('Audio notification not supported:', error);
+            // Fallback to manual update if API reload fails
+            manuallyUpdateEvents(processedEvent);
+          });
+      } else {
+        // Fallback to manual update if motionEventService is not available
+        manuallyUpdateEvents(processedEvent);
       }
     }
-  }, [latestMotionEvent, isDeviceOwner]);
+  }, [latestMotionEvent, isDeviceOwner, motionEventService, user]);
+
+  // Helper function to manually update events without API call
+  const manuallyUpdateEvents = useCallback((processedEvent) => {
+    console.info('Manually updating events with new real-time event');
+
+    // Add the new event to the events list
+    setEvents(prevEvents => {
+      // Check if the event is already in the list
+      const eventExists = prevEvents.some(event =>
+        event.id === processedEvent.id ||
+        (event.timestamp && processedEvent.timestamp &&
+         event.timestamp.getTime() === processedEvent.timestamp.getTime())
+      );
+
+      if (eventExists) {
+        return prevEvents;
+      }
+
+      // Add the new event to the list
+      const newEvents = [...prevEvents, processedEvent];
+
+      // Sort by timestamp (newest first)
+      newEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      console.info('Updated events list with new real-time event, total events:', newEvents.length);
+      return newEvents;
+    });
+
+    // Update the month events
+    setMonthEvents(prevMonthEvents => {
+      // Create a date key for the event
+      const date = new Date(processedEvent.timestamp);
+      const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+      // Get the events for this day
+      const dayEvents = prevMonthEvents[dateKey] || [];
+
+      // Check if the event is already in the list
+      const eventExists = dayEvents.some(event =>
+        event.id === processedEvent.id ||
+        (event.timestamp && processedEvent.timestamp &&
+         event.timestamp.getTime() === processedEvent.timestamp.getTime())
+      );
+
+      if (eventExists) {
+        return prevMonthEvents;
+      }
+
+      // Add the new event to the list
+      const newDayEvents = [...dayEvents, processedEvent];
+
+      // Sort by timestamp (newest first)
+      newDayEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      console.info('Updated month events with new real-time event for date:', dateKey);
+
+      // Return the updated month events
+      return {
+        ...prevMonthEvents,
+        [dateKey]: newDayEvents
+      };
+    });
+
+    // Update the last updated timestamp without triggering loading state
+    setLastUpdated(new Date());
+
+    console.info('Manual update of events completed successfully');
+  }, []);
 
   // Context value
   const value = {
