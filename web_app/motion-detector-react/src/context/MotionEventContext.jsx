@@ -144,13 +144,31 @@ export function MotionEventProvider({ children, motionEventService }) {
     if (latestMotionEvent && isDeviceOwner) {
       console.info('Received real-time motion event:', latestMotionEvent);
 
+      // Process the event to ensure it has the correct format
+      const processedEvent = {
+        ...latestMotionEvent,
+        // Ensure timestamp is a Date object
+        timestamp: latestMotionEvent.timestamp instanceof Date
+          ? latestMotionEvent.timestamp
+          : new Date(latestMotionEvent.timestamp),
+        // Ensure temperature and humidity are numbers
+        temperature: typeof latestMotionEvent.temperature === 'string'
+          ? parseFloat(latestMotionEvent.temperature)
+          : latestMotionEvent.temperature,
+        humidity: typeof latestMotionEvent.humidity === 'string'
+          ? parseFloat(latestMotionEvent.humidity)
+          : latestMotionEvent.humidity,
+        // Ensure device_id is set
+        device_id: latestMotionEvent.device_id || 'ESP32_001'
+      };
+
       // Add the new event to the events list if it's for the selected day
       setEvents(prevEvents => {
         // Check if the event is already in the list
         const eventExists = prevEvents.some(event =>
-          event.id === latestMotionEvent.id ||
-          (event.timestamp && latestMotionEvent.timestamp &&
-           event.timestamp.getTime() === latestMotionEvent.timestamp.getTime())
+          event.id === processedEvent.id ||
+          (event.timestamp && processedEvent.timestamp &&
+           event.timestamp.getTime() === processedEvent.timestamp.getTime())
         );
 
         if (eventExists) {
@@ -158,18 +176,19 @@ export function MotionEventProvider({ children, motionEventService }) {
         }
 
         // Add the new event to the list
-        const newEvents = [...prevEvents, latestMotionEvent];
+        const newEvents = [...prevEvents, processedEvent];
 
         // Sort by timestamp (newest first)
         newEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
+        console.info('Updated events list with new real-time event, total events:', newEvents.length);
         return newEvents;
       });
 
       // Update the month events
       setMonthEvents(prevMonthEvents => {
         // Create a date key for the event
-        const date = new Date(latestMotionEvent.timestamp);
+        const date = new Date(processedEvent.timestamp);
         const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
         // Get the events for this day
@@ -177,9 +196,9 @@ export function MotionEventProvider({ children, motionEventService }) {
 
         // Check if the event is already in the list
         const eventExists = dayEvents.some(event =>
-          event.id === latestMotionEvent.id ||
-          (event.timestamp && latestMotionEvent.timestamp &&
-           event.timestamp.getTime() === latestMotionEvent.timestamp.getTime())
+          event.id === processedEvent.id ||
+          (event.timestamp && processedEvent.timestamp &&
+           event.timestamp.getTime() === processedEvent.timestamp.getTime())
         );
 
         if (eventExists) {
@@ -187,10 +206,12 @@ export function MotionEventProvider({ children, motionEventService }) {
         }
 
         // Add the new event to the list
-        const newDayEvents = [...dayEvents, latestMotionEvent];
+        const newDayEvents = [...dayEvents, processedEvent];
 
         // Sort by timestamp (newest first)
         newDayEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        console.info('Updated month events with new real-time event for date:', dateKey);
 
         // Return the updated month events
         return {

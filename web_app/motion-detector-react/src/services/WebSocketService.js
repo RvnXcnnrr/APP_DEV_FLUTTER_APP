@@ -61,7 +61,12 @@ class WebSocketService {
 
       // Close any existing socket
       if (this.socket) {
-        this.socket.close();
+        try {
+          this.socket.close();
+          this.socket = null;
+        } catch (closeError) {
+          console.warn('Error closing existing WebSocket:', closeError);
+        }
       }
 
       try {
@@ -74,16 +79,38 @@ class WebSocketService {
         }
 
         console.info(`Connecting to WebSocket server: ${wsUrl}`);
+
+        // Create new WebSocket connection
         this.socket = new WebSocket(wsUrl);
+
+        // Set connection timeout
+        const connectionTimeout = setTimeout(() => {
+          if (this.socket && this.socket.readyState !== WebSocket.OPEN) {
+            console.warn('WebSocket connection timeout');
+
+            // Close the socket if it's not already closed
+            if (this.socket.readyState !== WebSocket.CLOSED) {
+              this.socket.close();
+            }
+
+            this.isConnected = false;
+            resolve(false);
+          }
+        }, 10000); // 10 second timeout
 
         // Set up event handlers
         this.socket.onopen = (event) => {
+          clearTimeout(connectionTimeout);
           this.handleOpen(event);
           resolve(true);
         };
+
         this.socket.onclose = this.handleClose;
         this.socket.onmessage = this.handleMessage;
+
         this.socket.onerror = (event) => {
+          console.error('WebSocket connection error:', event);
+          clearTimeout(connectionTimeout);
           this.handleError(event);
           resolve(false);
         };
@@ -185,14 +212,33 @@ class WebSocketService {
       if (data.type === 'motion_event') {
         // Process motion event
         const processedEvent = this.processMotionEvent(data);
-        this.eventCallbacks.motionEvent.forEach(callback => callback(processedEvent));
+        console.info('Processed motion event:', processedEvent);
+
+        // Trigger motion event callbacks
+        this.eventCallbacks.motionEvent.forEach(callback => {
+          try {
+            callback(processedEvent);
+          } catch (callbackError) {
+            console.error('Error in motion event callback:', callbackError);
+          }
+        });
       } else if (data.type === 'sensor_data') {
         // Process sensor data
         const processedData = this.processSensorData(data);
-        this.eventCallbacks.sensorData.forEach(callback => callback(processedData));
+        console.info('Processed sensor data:', processedData);
+
+        // Trigger sensor data callbacks
+        this.eventCallbacks.sensorData.forEach(callback => {
+          try {
+            callback(processedData);
+          } catch (callbackError) {
+            console.error('Error in sensor data callback:', callbackError);
+          }
+        });
       }
     } catch (error) {
       console.error('Error handling WebSocket message:', error);
+      console.error('Raw message data:', event.data);
     }
   }
 
@@ -286,6 +332,12 @@ class WebSocketService {
       return false;
     }
 
+    // Check if email is already set and hasn't changed
+    if (this.options.userEmail === email) {
+      console.info(`WebSocket authentication email already set to: ${email}`);
+      return true;
+    }
+
     // Update the user email
     this.options.userEmail = email;
     console.info(`Updated WebSocket authentication email: ${email}`);
@@ -294,7 +346,11 @@ class WebSocketService {
     if (this.isConnected) {
       console.info('Reconnecting WebSocket with new authentication email');
       this.disconnect();
-      this.connect();
+
+      // Short delay before reconnecting to ensure clean disconnect
+      setTimeout(() => {
+        this.connect();
+      }, 300);
     }
 
     return true;

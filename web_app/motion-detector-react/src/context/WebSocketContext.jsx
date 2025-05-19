@@ -79,10 +79,19 @@ export function WebSocketProvider({ children }) {
     if (user && user.email) {
       console.info(`Setting WebSocket authentication email: ${user.email}`);
       webSocketService.setUserEmail(user.email);
-    }
 
-    // Connect to WebSocket
-    webSocketService.connect();
+      // Force disconnect and reconnect to ensure the email is used
+      webSocketService.disconnect();
+
+      // Short delay before reconnecting to ensure clean disconnect
+      setTimeout(() => {
+        console.info('Reconnecting WebSocket with user email:', user.email);
+        webSocketService.connect();
+      }, 500);
+    } else {
+      // Connect to WebSocket without email
+      webSocketService.connect();
+    }
 
     // Clean up event handlers when component unmounts
     return () => {
