@@ -199,8 +199,17 @@ export function MotionEventProvider({ children, motionEventService }) {
         };
       });
 
-      // Update the last updated timestamp
+      // Update the last updated timestamp without triggering loading state
       setLastUpdated(new Date());
+
+      // Play a subtle notification sound for real-time events (optional)
+      try {
+        const audio = new Audio('/notification.mp3');
+        audio.volume = 0.3; // Set volume to 30%
+        audio.play().catch(e => console.log('Audio play failed:', e));
+      } catch (error) {
+        console.log('Audio notification not supported:', error);
+      }
     }
   }, [latestMotionEvent, isDeviceOwner]);
 

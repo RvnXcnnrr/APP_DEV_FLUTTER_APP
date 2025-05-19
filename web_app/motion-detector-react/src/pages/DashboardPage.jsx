@@ -27,6 +27,7 @@ const DashboardPage = () => {
   const [focusedDay, setFocusedDay] = useState(new Date());
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showNewEventNotification, setShowNewEventNotification] = useState(false);
 
   const { isDarkMode } = useTheme();
   const { isTokenOwner, user } = useUser();
@@ -43,6 +44,21 @@ const DashboardPage = () => {
 
   // Get WebSocket context
   const { latestSensorData, latestMotionEvent, reconnect } = useWebSocket();
+
+  // Show notification when new motion event is received
+  useEffect(() => {
+    if (latestMotionEvent && isDeviceOwner) {
+      // Show notification
+      setShowNewEventNotification(true);
+
+      // Hide notification after 3 seconds
+      const timer = setTimeout(() => {
+        setShowNewEventNotification(false);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [latestMotionEvent, isDeviceOwner]);
 
   // Create device service instance
   const [deviceService] = useState(() => {
@@ -812,15 +828,38 @@ const DashboardPage = () => {
                     borderBottom: index < events.length - 1 ? `1px solid ${theme.divider}` : 'none',
                     display: 'flex',
                     flexDirection: 'column',
+                    // Add a subtle highlight animation for new events
+                    animation: event === latestMotionEvent ? 'highlightNew 2s ease-out' : 'none',
                   }}
                 >
                   <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
                     marginBottom: '8px',
+                    position: 'relative',
                   }}>
-                    <span style={{ fontWeight: 'bold' }}>
+                    <span style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+                      {event === latestMotionEvent && (
+                        <span style={{
+                          display: 'inline-block',
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          backgroundColor: theme.primary,
+                          marginRight: '6px',
+                        }} />
+                      )}
                       {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {event === latestMotionEvent && (
+                        <span style={{
+                          fontSize: '10px',
+                          color: theme.primary,
+                          marginLeft: '6px',
+                          fontWeight: 'normal',
+                        }}>
+                          NEW
+                        </span>
+                      )}
                     </span>
                     <span style={{ color: theme.textSecondary, fontSize: '14px' }}>
                       Device: {event.device_id || 'ESP32_001'}
@@ -870,12 +909,59 @@ const DashboardPage = () => {
       <YearPicker />
       <MonthPicker />
 
-      {/* Add CSS for spinner animation */}
+      {/* New Event Notification */}
+      {showNewEventNotification && latestMotionEvent && (
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          backgroundColor: theme.primary,
+          color: 'white',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          animation: 'fadeIn 0.3s ease-out',
+          maxWidth: '300px',
+        }}>
+          <div style={{
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            backgroundColor: 'white',
+          }} />
+          <div>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>New Motion Detected</div>
+            <div style={{ fontSize: '12px' }}>
+              {new Date(latestMotionEvent.timestamp).toLocaleTimeString()} •
+              {typeof latestMotionEvent.temperature !== 'undefined' ?
+                ` ${latestMotionEvent.temperature.toFixed(1)}°C` : ''} •
+              {typeof latestMotionEvent.humidity !== 'undefined' ?
+                ` ${latestMotionEvent.humidity.toFixed(1)}%` : ''}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add CSS for animations */}
       <style>
         {`
           @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+          }
+
+          @keyframes highlightNew {
+            0% { background-color: ${theme.primary}30; }
+            100% { background-color: transparent; }
+          }
+
+          @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
           }
         `}
       </style>
