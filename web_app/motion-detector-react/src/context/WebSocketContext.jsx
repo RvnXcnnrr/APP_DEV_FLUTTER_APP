@@ -17,6 +17,7 @@ export function WebSocketProvider({ children }) {
   const [latestSensorData, setLatestSensorData] = useState(null);
   const [latestMotionEvent, setLatestMotionEvent] = useState(null);
   const [connectionError, setConnectionError] = useState(null);
+  const [sensorDataUpdated, setSensorDataUpdated] = useState(false);
 
   // Get user context
   const { user, isLoggedIn } = useUser();
@@ -52,6 +53,14 @@ export function WebSocketProvider({ children }) {
     const handleSensorData = (data) => {
       console.debug('Received sensor data in context:', data);
       setLatestSensorData(data);
+
+      // Set the sensorDataUpdated flag to true to trigger animations
+      setSensorDataUpdated(true);
+
+      // Reset the flag after 3 seconds
+      setTimeout(() => {
+        setSensorDataUpdated(false);
+      }, 3000);
     };
 
     const handleMotionEvent = (event) => {
@@ -103,6 +112,7 @@ export function WebSocketProvider({ children }) {
     latestSensorData,
     latestMotionEvent,
     connectionError,
+    sensorDataUpdated,
     reconnect,
     webSocketService
   };

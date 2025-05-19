@@ -43,7 +43,10 @@ const DashboardPage = () => {
   } = useMotionEvents();
 
   // Get WebSocket context
-  const { latestSensorData, latestMotionEvent, reconnect } = useWebSocket();
+  const { latestSensorData, latestMotionEvent, sensorDataUpdated, reconnect } = useWebSocket();
+
+  // State for sensor data notification
+  const [showSensorDataNotification, setShowSensorDataNotification] = useState(false);
 
   // Show notification when new motion event is received
   useEffect(() => {
@@ -59,6 +62,21 @@ const DashboardPage = () => {
       return () => clearTimeout(timer);
     }
   }, [latestMotionEvent, isDeviceOwner]);
+
+  // Show notification when new sensor data is received
+  useEffect(() => {
+    if (sensorDataUpdated && latestSensorData && isDeviceOwner) {
+      // Show notification
+      setShowSensorDataNotification(true);
+
+      // Hide notification after 3 seconds
+      const timer = setTimeout(() => {
+        setShowSensorDataNotification(false);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [sensorDataUpdated, latestSensorData, isDeviceOwner]);
 
   // Create device service instance
   const [deviceService] = useState(() => {
@@ -415,14 +433,33 @@ const DashboardPage = () => {
             boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
             padding: '16px',
             marginBottom: '16px',
+            // Add a subtle animation when new data is received
+            animation: sensorDataUpdated ? 'pulseData 1s ease-out' : 'none',
+            transition: 'all 0.3s ease',
           }}>
             <h3 style={{
               margin: '0 0 12px 0',
               fontSize: '16px',
               fontWeight: 'bold',
               color: theme.primary,
+              display: 'flex',
+              alignItems: 'center',
             }}>
               Latest Sensor Data
+              {sensorDataUpdated && (
+                <span style={{
+                  fontSize: '10px',
+                  fontWeight: 'bold',
+                  color: 'white',
+                  backgroundColor: theme.primary,
+                  padding: '2px 6px',
+                  borderRadius: '10px',
+                  marginLeft: '8px',
+                  animation: 'fadeIn 0.3s ease-out',
+                }}>
+                  UPDATED
+                </span>
+              )}
               <span style={{
                 fontSize: '12px',
                 fontWeight: 'normal',
@@ -445,6 +482,8 @@ const DashboardPage = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
+                // Add a subtle animation when new data is received
+                animation: sensorDataUpdated ? 'highlightData 1.5s ease-out' : 'none',
               }}>
                 <FaThermometerHalf size={24} color={theme.primary} />
                 <div style={{
@@ -459,6 +498,8 @@ const DashboardPage = () => {
                   fontWeight: 'bold',
                   color: theme.primary,
                   marginTop: '4px',
+                  // Add a subtle animation when new data is received
+                  animation: sensorDataUpdated ? 'scaleData 0.5s ease-out' : 'none',
                 }}>
                   {typeof latestSensorData.temperature !== 'undefined' ?
                     `${parseFloat(latestSensorData.temperature).toFixed(1)}°C` : 'N/A'}
@@ -473,6 +514,8 @@ const DashboardPage = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
+                // Add a subtle animation when new data is received
+                animation: sensorDataUpdated ? 'highlightData 1.5s ease-out' : 'none',
               }}>
                 <FaTint size={24} color={theme.secondary || '#2196f3'} />
                 <div style={{
@@ -487,6 +530,8 @@ const DashboardPage = () => {
                   fontWeight: 'bold',
                   color: theme.secondary || '#2196f3',
                   marginTop: '4px',
+                  // Add a subtle animation when new data is received
+                  animation: sensorDataUpdated ? 'scaleData 0.5s ease-out' : 'none',
                 }}>
                   {typeof latestSensorData.humidity !== 'undefined' ?
                     `${parseFloat(latestSensorData.humidity).toFixed(1)}%` : 'N/A'}
@@ -946,6 +991,42 @@ const DashboardPage = () => {
         </div>
       )}
 
+      {/* Sensor Data Update Notification */}
+      {showSensorDataNotification && latestSensorData && (
+        <div style={{
+          position: 'fixed',
+          bottom: showNewEventNotification ? '90px' : '20px',
+          right: '20px',
+          backgroundColor: theme.secondary || '#2196f3',
+          color: 'white',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          animation: 'fadeIn 0.3s ease-out',
+          maxWidth: '300px',
+        }}>
+          <div style={{
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            backgroundColor: 'white',
+          }} />
+          <div>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Sensor Data Updated</div>
+            <div style={{ fontSize: '12px' }}>
+              Temperature: {typeof latestSensorData.temperature !== 'undefined' ?
+                `${parseFloat(latestSensorData.temperature).toFixed(1)}°C` : 'N/A'} •
+              Humidity: {typeof latestSensorData.humidity !== 'undefined' ?
+                `${parseFloat(latestSensorData.humidity).toFixed(1)}%` : 'N/A'}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add CSS for animations */}
       <style>
         {`
@@ -962,6 +1043,22 @@ const DashboardPage = () => {
           @keyframes fadeIn {
             0% { opacity: 0; transform: translateY(10px); }
             100% { opacity: 1; transform: translateY(0); }
+          }
+
+          @keyframes pulseData {
+            0% { box-shadow: 0 0 0 0 ${theme.primary}40; }
+            70% { box-shadow: 0 0 0 10px ${theme.primary}00; }
+            100% { box-shadow: 0 0 0 0 ${theme.primary}00; }
+          }
+
+          @keyframes highlightData {
+            0% { background-color: ${theme.primary}30; }
+            100% { background-color: ${theme.primary}10; }
+          }
+
+          @keyframes scaleData {
+            0% { transform: scale(1.2); }
+            100% { transform: scale(1); }
           }
         `}
       </style>

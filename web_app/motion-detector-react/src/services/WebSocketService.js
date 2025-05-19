@@ -188,7 +188,8 @@ class WebSocketService {
         this.eventCallbacks.motionEvent.forEach(callback => callback(processedEvent));
       } else if (data.type === 'sensor_data') {
         // Process sensor data
-        this.eventCallbacks.sensorData.forEach(callback => callback(data));
+        const processedData = this.processSensorData(data);
+        this.eventCallbacks.sensorData.forEach(callback => callback(processedData));
       }
     } catch (error) {
       console.error('Error handling WebSocket message:', error);
@@ -225,6 +226,28 @@ class WebSocketService {
       timestamp,
       temperature: typeof data.temperature === 'string' ? parseFloat(data.temperature) : data.temperature,
       humidity: typeof data.humidity === 'string' ? parseFloat(data.humidity) : data.humidity,
+    };
+  }
+
+  /**
+   * Processes sensor data
+   * @param {Object} data - The sensor data
+   * @returns {Object} The processed sensor data
+   */
+  processSensorData(data) {
+    // Convert timestamp to Date object
+    const timestamp = data.timestamp ? new Date(data.timestamp) : new Date();
+
+    // Return processed data
+    return {
+      ...data,
+      timestamp,
+      temperature: typeof data.temperature === 'string' ? parseFloat(data.temperature) : data.temperature,
+      humidity: typeof data.humidity === 'string' ? parseFloat(data.humidity) : data.humidity,
+      // Add a unique ID for easier tracking
+      id: `sensor_${Date.now()}`,
+      // Add received time for display purposes
+      receivedAt: new Date(),
     };
   }
 
