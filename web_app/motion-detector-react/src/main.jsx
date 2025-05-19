@@ -30,7 +30,13 @@ import SettingsPage from './pages/SettingsPage';
 const apiService = new ApiService();
 const authService = new AuthService(apiService);
 const motionEventService = new MotionEventService(apiService);
-const webSocketService = new WebSocketService(AppConfig.wsBaseUrl);
+
+// Initialize WebSocket service with configuration
+// We'll set the user email in the WebSocketContext when the user logs in
+const webSocketService = new WebSocketService(AppConfig.wsBaseUrl, {
+  reconnectInterval: 5000,
+  maxReconnectAttempts: 0,
+});
 
 // Make services available globally for components that can't use context
 // This is not ideal, but it's a simple solution for components that need access to services

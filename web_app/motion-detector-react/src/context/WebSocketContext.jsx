@@ -17,58 +17,64 @@ export function WebSocketProvider({ children }) {
   const [latestSensorData, setLatestSensorData] = useState(null);
   const [latestMotionEvent, setLatestMotionEvent] = useState(null);
   const [connectionError, setConnectionError] = useState(null);
-  
+
   // Get user context
   const { user, isLoggedIn } = useUser();
-  
+
   // Create WebSocket service
   const [webSocketService] = useState(() => new WebSocketService(AppConfig.wsBaseUrl));
-  
+
   // Connect to WebSocket when component mounts or user changes
   useEffect(() => {
     // Only connect if user is logged in
-    if (!isLoggedIn) {
+    if (!isLoggedIn || !user) {
       setIsConnected(false);
       return;
     }
-    
+
     // Set up event handlers
     const handleConnect = () => {
       console.info('WebSocket connected in context');
       setIsConnected(true);
       setConnectionError(null);
     };
-    
+
     const handleDisconnect = () => {
       console.info('WebSocket disconnected in context');
       setIsConnected(false);
     };
-    
+
     const handleError = (error) => {
       console.error('WebSocket error in context:', error);
       setConnectionError('Failed to connect to WebSocket server');
     };
-    
+
     const handleSensorData = (data) => {
       console.debug('Received sensor data in context:', data);
       setLatestSensorData(data);
     };
-    
+
     const handleMotionEvent = (event) => {
       console.debug('Received motion event in context:', event);
       setLatestMotionEvent(event);
     };
-    
+
     // Register event handlers
     webSocketService.on('connect', handleConnect);
     webSocketService.on('disconnect', handleDisconnect);
     webSocketService.on('error', handleError);
     webSocketService.on('sensorData', handleSensorData);
     webSocketService.on('motionEvent', handleMotionEvent);
-    
+
+    // Set user email for authentication
+    if (user && user.email) {
+      console.info(`Setting WebSocket authentication email: ${user.email}`);
+      webSocketService.setUserEmail(user.email);
+    }
+
     // Connect to WebSocket
     webSocketService.connect();
-    
+
     // Clean up event handlers when component unmounts
     return () => {
       webSocketService.off('connect', handleConnect);
@@ -76,17 +82,21 @@ export function WebSocketProvider({ children }) {
       webSocketService.off('error', handleError);
       webSocketService.off('sensorData', handleSensorData);
       webSocketService.off('motionEvent', handleMotionEvent);
-      
+
       // Disconnect from WebSocket
       webSocketService.disconnect();
     };
-  }, [isLoggedIn, webSocketService]);
-  
+  }, [isLoggedIn, user, webSocketService]);
+
   // Reconnect function
   const reconnect = useCallback(() => {
+    // Make sure we have the user email set
+    if (user && user.email) {
+      webSocketService.setUserEmail(user.email);
+    }
     webSocketService.connect();
-  }, [webSocketService]);
-  
+  }, [webSocketService, user]);
+
   // Context value
   const value = {
     isConnected,
@@ -96,7 +106,7 @@ export function WebSocketProvider({ children }) {
     reconnect,
     webSocketService
   };
-  
+
   return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
 }
 

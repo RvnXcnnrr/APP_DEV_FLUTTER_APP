@@ -14,6 +14,7 @@ class WebSocketService {
     this.options = {
       reconnectInterval: 5000, // Reconnect every 5 seconds
       maxReconnectAttempts: 0, // Unlimited reconnect attempts
+      userEmail: null, // User email for authentication
       ...options,
     };
 
@@ -64,8 +65,16 @@ class WebSocketService {
       }
 
       try {
-        console.info(`Connecting to WebSocket server: ${this.baseUrl}`);
-        this.socket = new WebSocket(this.baseUrl);
+        // Add email parameter to URL if provided
+        let wsUrl = this.baseUrl;
+        if (this.options.userEmail) {
+          // Check if the URL already has parameters
+          const hasParams = wsUrl.includes('?');
+          wsUrl = `${wsUrl}${hasParams ? '&' : '?'}email=${encodeURIComponent(this.options.userEmail)}`;
+        }
+
+        console.info(`Connecting to WebSocket server: ${wsUrl}`);
+        this.socket = new WebSocket(wsUrl);
 
         // Set up event handlers
         this.socket.onopen = (event) => {
@@ -241,6 +250,31 @@ class WebSocketService {
     if (this.eventCallbacks[event]) {
       this.eventCallbacks[event] = this.eventCallbacks[event].filter(cb => cb !== callback);
     }
+  }
+
+  /**
+   * Sets the user email for authentication
+   * @param {string} email - The user's email
+   * @returns {boolean} Whether the email was updated
+   */
+  setUserEmail(email) {
+    if (!email) {
+      console.warn('No email provided for WebSocket authentication');
+      return false;
+    }
+
+    // Update the user email
+    this.options.userEmail = email;
+    console.info(`Updated WebSocket authentication email: ${email}`);
+
+    // Reconnect if already connected to use the new email
+    if (this.isConnected) {
+      console.info('Reconnecting WebSocket with new authentication email');
+      this.disconnect();
+      this.connect();
+    }
+
+    return true;
   }
 }
 
