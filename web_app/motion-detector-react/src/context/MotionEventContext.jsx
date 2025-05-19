@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { useUser } from './UserContext';
+import { useWebSocket } from './WebSocketContext';
 import DeviceService from '../services/DeviceService';
 
 // Create the context
@@ -23,6 +24,9 @@ export function MotionEventProvider({ children, motionEventService }) {
 
   // Get user context
   const { user, isLoggedIn } = useUser();
+
+  // Get WebSocket context
+  const { latestMotionEvent, isConnected: wsConnected } = useWebSocket();
 
   // Create device service
   const [deviceService] = useState(() => new DeviceService(motionEventService?.apiService));
@@ -135,6 +139,71 @@ export function MotionEventProvider({ children, motionEventService }) {
     return monthEvents[dateKey] || [];
   }, [monthEvents, isDeviceOwner]);
 
+  // Handle real-time motion events from WebSocket
+  useEffect(() => {
+    if (latestMotionEvent && isDeviceOwner) {
+      console.info('Received real-time motion event:', latestMotionEvent);
+
+      // Add the new event to the events list if it's for the selected day
+      setEvents(prevEvents => {
+        // Check if the event is already in the list
+        const eventExists = prevEvents.some(event =>
+          event.id === latestMotionEvent.id ||
+          (event.timestamp && latestMotionEvent.timestamp &&
+           event.timestamp.getTime() === latestMotionEvent.timestamp.getTime())
+        );
+
+        if (eventExists) {
+          return prevEvents;
+        }
+
+        // Add the new event to the list
+        const newEvents = [...prevEvents, latestMotionEvent];
+
+        // Sort by timestamp (newest first)
+        newEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        return newEvents;
+      });
+
+      // Update the month events
+      setMonthEvents(prevMonthEvents => {
+        // Create a date key for the event
+        const date = new Date(latestMotionEvent.timestamp);
+        const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+        // Get the events for this day
+        const dayEvents = prevMonthEvents[dateKey] || [];
+
+        // Check if the event is already in the list
+        const eventExists = dayEvents.some(event =>
+          event.id === latestMotionEvent.id ||
+          (event.timestamp && latestMotionEvent.timestamp &&
+           event.timestamp.getTime() === latestMotionEvent.timestamp.getTime())
+        );
+
+        if (eventExists) {
+          return prevMonthEvents;
+        }
+
+        // Add the new event to the list
+        const newDayEvents = [...dayEvents, latestMotionEvent];
+
+        // Sort by timestamp (newest first)
+        newDayEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        // Return the updated month events
+        return {
+          ...prevMonthEvents,
+          [dateKey]: newDayEvents
+        };
+      });
+
+      // Update the last updated timestamp
+      setLastUpdated(new Date());
+    }
+  }, [latestMotionEvent, isDeviceOwner]);
+
   // Context value
   const value = {
     events,
@@ -146,7 +215,8 @@ export function MotionEventProvider({ children, motionEventService }) {
     loadEventsForMonth,
     hasDayEvents,
     getEventsForDay,
-    isDeviceOwner
+    isDeviceOwner,
+    wsConnected
   };
 
   return <MotionEventContext.Provider value={value}>{children}</MotionEventContext.Provider>;

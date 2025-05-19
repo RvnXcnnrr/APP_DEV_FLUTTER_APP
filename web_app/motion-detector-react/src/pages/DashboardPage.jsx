@@ -13,6 +13,7 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { useUser } from '../context/UserContext';
 import { useMotionEvents } from '../context/MotionEventContext';
+import { useWebSocket } from '../context/WebSocketContext';
 import { getTheme } from '../utils/theme';
 import TopNavBar from '../components/TopNavBar';
 import DeviceService from '../services/DeviceService';
@@ -36,8 +37,12 @@ const DashboardPage = () => {
     getEventsForDay,
     isLoading,
     error,
-    isDeviceOwner
+    isDeviceOwner,
+    wsConnected
   } = useMotionEvents();
+
+  // Get WebSocket context
+  const { latestSensorData, latestMotionEvent, reconnect } = useWebSocket();
 
   // Create device service instance
   const [deviceService] = useState(() => {
@@ -343,6 +348,138 @@ const DashboardPage = () => {
     >
       {/* Top navigation bar */}
       <TopNavBar title="Motion Dashboard" />
+
+      {/* WebSocket connection status */}
+      {isDeviceOwner && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '4px 0',
+          backgroundColor: wsConnected ? `${theme.success || '#4caf50'}20` : `${theme.error || '#f44336'}20`,
+          color: wsConnected ? (theme.success || '#4caf50') : (theme.error || '#f44336'),
+          fontSize: '12px',
+          fontWeight: 'bold',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: wsConnected ? (theme.success || '#4caf50') : (theme.error || '#f44336'),
+            }} />
+            {wsConnected ? 'Real-time updates active' : 'Real-time updates disconnected'}
+            {!wsConnected && (
+              <button
+                onClick={reconnect}
+                style={{
+                  marginLeft: '8px',
+                  padding: '2px 6px',
+                  backgroundColor: theme.primary,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '10px',
+                  cursor: 'pointer',
+                }}
+              >
+                Reconnect
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Latest Sensor Data */}
+      {isDeviceOwner && latestSensorData && (
+        <div style={{ padding: '16px 16px 0 16px' }}>
+          <div style={{
+            backgroundColor: theme.surface,
+            borderRadius: '12px',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+            padding: '16px',
+            marginBottom: '16px',
+          }}>
+            <h3 style={{
+              margin: '0 0 12px 0',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              color: theme.primary,
+            }}>
+              Latest Sensor Data
+              <span style={{
+                fontSize: '12px',
+                fontWeight: 'normal',
+                color: theme.textSecondary,
+                marginLeft: '8px',
+              }}>
+                {latestSensorData.timestamp ? new Date(latestSensorData.timestamp).toLocaleTimeString() : 'Just now'}
+              </span>
+            </h3>
+
+            <div style={{
+              display: 'flex',
+              gap: '16px',
+            }}>
+              <div style={{
+                flex: 1,
+                backgroundColor: `${theme.primary}10`,
+                borderRadius: '8px',
+                padding: '12px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+              }}>
+                <FaThermometerHalf size={24} color={theme.primary} />
+                <div style={{
+                  fontSize: '12px',
+                  color: theme.textSecondary,
+                  marginTop: '4px',
+                }}>
+                  Temperature
+                </div>
+                <div style={{
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  color: theme.primary,
+                  marginTop: '4px',
+                }}>
+                  {typeof latestSensorData.temperature !== 'undefined' ?
+                    `${parseFloat(latestSensorData.temperature).toFixed(1)}°C` : 'N/A'}
+                </div>
+              </div>
+
+              <div style={{
+                flex: 1,
+                backgroundColor: `${theme.secondary || '#2196f3'}10`,
+                borderRadius: '8px',
+                padding: '12px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+              }}>
+                <FaTint size={24} color={theme.secondary || '#2196f3'} />
+                <div style={{
+                  fontSize: '12px',
+                  color: theme.textSecondary,
+                  marginTop: '4px',
+                }}>
+                  Humidity
+                </div>
+                <div style={{
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  color: theme.secondary || '#2196f3',
+                  marginTop: '4px',
+                }}>
+                  {typeof latestSensorData.humidity !== 'undefined' ?
+                    `${parseFloat(latestSensorData.humidity).toFixed(1)}%` : 'N/A'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Calendar Card */}
       <div style={{ padding: '16px' }}>
