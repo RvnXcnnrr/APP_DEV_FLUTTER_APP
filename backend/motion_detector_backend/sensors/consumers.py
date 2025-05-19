@@ -20,60 +20,69 @@ class SensorConsumer(AsyncWebsocketConsumer):
     WebSocket consumer for sensor data
     """
     @database_sync_to_async
-    def get_user_from_token(self, token_key):
+    def get_user_from_auth(self, auth_param):
         """
-        Get a user from a token key.
+        Get a user from an authentication parameter (token or email).
         """
-        # First try to get user from JWT token
+        # First check if it's an email
+        if '@' in auth_param:
+            try:
+                # Try to get user by email
+                return User.objects.get(email=auth_param)
+            except User.DoesNotExist:
+                return AnonymousUser()
+
+        # If not an email, try token-based authentication
         try:
             # Try to decode JWT token
-            decoded_token = AccessToken(token_key)
+            decoded_token = AccessToken(auth_param)
             user_id = decoded_token['user_id']
             return User.objects.get(id=user_id)
         except (TokenError, InvalidToken, User.DoesNotExist, KeyError):
             # If JWT token is invalid, try auth token
             try:
-                token = Token.objects.get(key=token_key)
+                token = Token.objects.get(key=auth_param)
                 return token.user
             except Token.DoesNotExist:
                 # Check if it's a device token
                 try:
-                    device = Device.objects.get(token=token_key)
+                    device = Device.objects.get(token=auth_param)
                     if device.is_active:
                         return device.owner
                 except Device.DoesNotExist:
                     pass
 
-                # If it's the hardcoded device token for ESP32_001, only allow the specific owner
-                if token_key == '54836780fc03bcdff737d0eadbe16156f461342f':
-                    try:
-                        # Only allow oracle.tech.143@gmail.com to use this token
-                        return User.objects.get(email='oracle.tech.143@gmail.com')
-                    except User.DoesNotExist:
-                        return AnonymousUser()
                 return AnonymousUser()
 
     async def connect(self):
         """
         Called when the WebSocket is handshaking as part of initial connection
         """
-        # Get the token from the query string
+        # Get the query string parameters
         query_string = self.scope.get('query_string', b'').decode()
         query_params = parse_qs(query_string)
 
-        token_key = query_params.get('token', [None])[0]
-
-        if token_key:
-            # Get the user from the token
-            self.user = await self.get_user_from_token(token_key)
-
-            # If we couldn't authenticate the user and it's not the device token
-            if self.user.is_anonymous and token_key != '54836780fc03bcdff737d0eadbe16156f461342f':
-                # Close the connection if authentication failed
+        # Check for email parameter first
+        email = query_params.get('email', [None])[0]
+        if email:
+            # Get the user from the email
+            self.user = await self.get_user_from_auth(email)
+            auth_method = "email"
+        else:
+            # Fall back to token authentication
+            token_key = query_params.get('token', [None])[0]
+            if token_key:
+                # Get the user from the token
+                self.user = await self.get_user_from_auth(token_key)
+                auth_method = "token"
+            else:
+                # Close the connection if no authentication is provided
                 await self.close(code=4003)  # 4003 is a custom code for authentication failure
                 return
-        else:
-            # Close the connection if no token is provided
+
+        # If authentication failed
+        if self.user.is_anonymous:
+            # Close the connection
             await self.close(code=4003)  # 4003 is a custom code for authentication failure
             return
 
@@ -87,7 +96,7 @@ class SensorConsumer(AsyncWebsocketConsumer):
         await self.accept()
         await self.send(text_data=json.dumps({
             'type': 'connection_established',
-            'message': f'Connected to WebSocket server with token authentication'
+            'message': f'Connected to WebSocket server with {auth_method} authentication'
         }))
 
     async def disconnect(self, close_code):
@@ -129,56 +138,26 @@ class SensorConsumer(AsyncWebsocketConsumer):
         Get a device by its ID, or create it if it doesn't exist
         """
         try:
-            # For ESP32_001, enforce specific owner access control
-            if device_id == 'ESP32_001':
-                try:
-                    # Get the device
-                    device = Device.objects.get(device_id=device_id)
+            # Try to get the device
+            try:
+                device = Device.objects.get(device_id=device_id)
 
-                    # Check if the user is the correct owner (oracle.tech.143@gmail.com)
-                    if self.user.email != 'oracle.tech.143@gmail.com':
-                        print(f"Access denied: User {self.user.email} is not authorized to access device {device_id}")
-                        return None
+                # Check if the user is the device owner
+                if device.owner != self.user:
+                    print(f"Access denied: User {self.user.email} is not the owner of device {device_id}")
+                    return None
 
-                    # Set the token if it's not already set
-                    if not device.token:
-                        device.token = '54836780fc03bcdff737d0eadbe16156f461342f'
-                        device.save(update_fields=['token'])
-
-                    return device
-                except Device.DoesNotExist:
-                    # Only create the device if the user is oracle.tech.143@gmail.com
-                    if self.user.email == 'oracle.tech.143@gmail.com':
-                        device = Device.objects.create(
-                            device_id=device_id,
-                            name=f"ESP32 Device {device_id}",
-                            location="Living Room",
-                            owner=self.user,
-                            token='54836780fc03bcdff737d0eadbe16156f461342f'
-                        )
-                        return device
-                    else:
-                        print(f"Access denied: User {self.user.email} is not authorized to create device {device_id}")
-                        return None
-            else:
-                # For other devices, use the standard logic
-                try:
-                    device = Device.objects.get(device_id=device_id)
-                    # If the device exists but doesn't belong to the user and the user is authenticated,
-                    # update the owner to the current user
-                    if device.owner != self.user and not self.user.is_anonymous:
-                        device.owner = self.user
-                        device.save()
-                    return device
-                except Device.DoesNotExist:
-                    # Create a new device if it doesn't exist
-                    device = Device.objects.create(
-                        device_id=device_id,
-                        name=f"ESP32 Device {device_id}",
-                        location="Unknown",
-                        owner=self.user
-                    )
-                    return device
+                return device
+            except Device.DoesNotExist:
+                # Create a new device if it doesn't exist
+                device = Device.objects.create(
+                    device_id=device_id,
+                    name=f"ESP32 Device {device_id}",
+                    location="Living Room",
+                    owner=self.user
+                )
+                print(f"Created new device {device_id} for user {self.user.email}")
+                return device
         except Exception as e:
             print(f"Error getting or creating device: {e}")
             return None

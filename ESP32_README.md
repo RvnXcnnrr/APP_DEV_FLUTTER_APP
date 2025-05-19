@@ -52,42 +52,49 @@ Before uploading the code, you need to configure:
 
 1. **WiFi Credentials**:
    ```cpp
-   const char* ssid = "YourWiFiSSID";
-   const char* password = "YourWiFiPassword";
+   const char* WIFI_SSID = "YourWiFiSSID";
+   const char* WIFI_PASSWORD = "YourWiFiPassword";
    ```
 
 2. **Server URLs**:
 
    For development (local server):
    ```cpp
-   const char* httpServerUrl = "http://192.168.1.9:8000";
-   const char* wsServerUrl = "ws://192.168.1.9:8000/ws/sensors/";
+   const char* WS_HOST = "192.168.1.9";
+   const int WS_PORT = 8000;
    ```
 
    For production (deployed server):
    ```cpp
-   const char* httpServerUrl = "https://app-dev-flutter-app.onrender.com";
-   const char* wsServerUrl = "wss://app-dev-flutter-app.onrender.com/ws/sensors/";
+   const char* WS_HOST = "app-dev-flutter-app.onrender.com";
+   const int WS_PORT = 443;
    ```
 
 3. **Authentication**:
+
+   Using email-based authentication (recommended):
    ```cpp
-   const char* deviceToken = "fe1f6c58646d8942c85cb5fc456990d4a639c1a0";
+   const char* DEVICE_OWNER_EMAIL = "oracle.tech.143@gmail.com";
+   const char* WS_PATH = "/ws/sensors/?email=oracle.tech.143@gmail.com";
    ```
-   This token must be registered in the Django backend for the device.
+
+   Or using token-based authentication (legacy):
+   ```cpp
+   const char* WS_PATH = "/ws/sensors/?token=fe1f6c58646d8942c85cb5fc456990d4a639c1a0";
+   ```
+
+   The email or token must be registered in the Django backend for the device.
 
 4. **Device Information**:
    ```cpp
-   const char* deviceId = "ESP32_001";
-   const char* deviceLocation = "Living Room";
-   const char* deviceOwnerEmail = "oracle.tech.143@gmail.com";
+   const char* DEVICE_ID = "ESP32_001";
    ```
-   You can change these to identify your specific device.
+   This ID must match the device registered in the backend.
 
 5. **Time Settings**:
    ```cpp
-   const long gmtOffset_sec = 28800;  // GMT+8 (Philippine Time)
-   const int daylightOffset_sec = 0;  // No DST in the Philippines
+   const long GMT_OFFSET_SEC = 28800;  // GMT+8 (Philippine Time)
+   const int DAYLIGHT_OFFSET_SEC = 0;  // No DST in the Philippines
    ```
    Adjust these values based on your timezone.
 
@@ -106,9 +113,11 @@ Before uploading the code, you need to configure:
    - DHT sensor library by Adafruit
    - Adafruit Unified Sensor by Adafruit
 
-4. Choose between development and production code:
-   - For local development: Use `esp32_motion_detector.ino`
-   - For production deployment: Use `ESP32_Production_Template.ino`
+4. Choose the appropriate code template:
+   - For local development with token auth: Use `esp32_motion_detector.ino`
+   - For local development with email auth: Use `ESP32_Email_Auth.ino` (recommended)
+   - For production with token auth: Use `ESP32_Production_Template.ino`
+   - For production with email auth: Use `ESP32_Production_Email_Auth.ino` (recommended)
 
 5. Configure the settings as described in the Configuration section
 
@@ -207,7 +216,7 @@ The ESP32 sends and receives WebSocket messages with the following structure:
 - **Server Communication Issues**:
   - Verify the server URLs are correct (HTTP and WebSocket)
   - Make sure the Django backend is running
-  - Check that your device token is valid and registered in the backend
+  - Check that your device owner email is registered in the backend
   - For local development, ensure your computer's firewall allows incoming connections
   - For production, check that the Render.com service is running
 
@@ -226,7 +235,8 @@ The ESP32 sends and receives WebSocket messages with the following structure:
 
 - **WebSocket Connection Issues**:
   - Check the WebSocket URL format (ws:// for local, wss:// for production)
-  - Verify that the token parameter is included in the URL
+  - Verify that the email or token parameter is included in the URL
+  - Make sure the email matches the device owner's email in the backend
   - The code includes automatic reconnection for WebSocket connections
   - Check the Serial Monitor for WebSocket connection status messages
 
@@ -239,13 +249,24 @@ The ESP32 sends and receives WebSocket messages with the following structure:
 
 For production deployment:
 
-1. Use the `ESP32_Production_Template.ino` file
+1. Use the `ESP32_Production_Email_Auth.ino` file (recommended) or `ESP32_Production_Template.ino` file
 2. Configure with production settings:
+
+   For email-based authentication (recommended):
    ```cpp
-   const char* httpServerUrl = "https://app-dev-flutter-app.onrender.com";
-   const char* wsServerUrl = "wss://app-dev-flutter-app.onrender.com/ws/sensors/";
-   const char* deviceToken = "your-device-token";
+   const char* WS_HOST = "app-dev-flutter-app.onrender.com";
+   const int WS_PORT = 443;
+   const char* DEVICE_OWNER_EMAIL = "oracle.tech.143@gmail.com";
+   const char* WS_PATH = "/ws/sensors/?email=oracle.tech.143@gmail.com";
    ```
+
+   For token-based authentication (legacy):
+   ```cpp
+   const char* WS_HOST = "app-dev-flutter-app.onrender.com";
+   const int WS_PORT = 443;
+   const char* WS_PATH = "/ws/sensors/?token=your-device-token";
+   ```
+
 3. Set the correct timezone for your location
 4. Upload the code to your ESP32
 5. Monitor the Serial output for connection status

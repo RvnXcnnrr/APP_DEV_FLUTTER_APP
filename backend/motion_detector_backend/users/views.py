@@ -6,9 +6,14 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import redirect
 from django.http import HttpResponseRedirect
 from django.urls import reverse
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from allauth.account.views import ConfirmEmailView
 from allauth.account.models import EmailConfirmation, EmailConfirmationHMAC, EmailAddress
 from allauth.account.utils import send_email_confirmation
+from PIL import Image
+import io
+import os
+import sys
 from .serializers import (
     CustomUserDetailsSerializer,
     ProfilePictureSerializer,
@@ -50,28 +55,37 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         last_name = getattr(instance, 'last_name', '')
         print(f"User before update - first_name: {first_name}, last_name: {last_name}")
 
+        # Create serializer and validate
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
 
-        # Print validated data
-        print(f"Validated data: {serializer.validated_data}")
+        try:
+            serializer.is_valid(raise_exception=True)
 
-        # Perform the update
-        self.perform_update(serializer)
+            # Print validated data
+            print(f"Validated data: {serializer.validated_data}")
 
-        # Explicitly save the instance to ensure changes are persisted
-        instance.save()
+            # Perform the update
+            self.perform_update(serializer)
 
-        # Refresh from database to verify changes were saved
-        instance.refresh_from_db()
+            # Explicitly save the instance to ensure changes are persisted
+            instance.save()
 
-        # Safely access first_name and last_name after update
-        first_name = getattr(instance, 'first_name', '')
-        last_name = getattr(instance, 'last_name', '')
-        print(f"User after update - first_name: {first_name}, last_name: {last_name}")
+            # Refresh from database to verify changes were saved
+            instance.refresh_from_db()
 
-        # Return the updated user data
-        return Response(serializer.data)
+            # Safely access first_name and last_name after update
+            first_name = getattr(instance, 'first_name', '')
+            last_name = getattr(instance, 'last_name', '')
+            print(f"User after update - first_name: {first_name}, last_name: {last_name}")
+
+            # Return the updated user data
+            return Response(serializer.data)
+        except Exception as e:
+            print(f"Error updating user profile: {e}")
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class ProfilePictureUpdateView(generics.UpdateAPIView):
     """
@@ -123,7 +137,7 @@ class ProfilePictureUpdateView(generics.UpdateAPIView):
             traceback.print_exc()
             return image_file  # Return original file if conversion fails
 
-    def update(self, request, *args, **kwargs):
+    def update(self, request, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
 
@@ -138,15 +152,23 @@ class ProfilePictureUpdateView(generics.UpdateAPIView):
                 import traceback
                 traceback.print_exc()
 
+        # Create serializer
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
 
-        if not serializer.is_valid():
-            print(f"Serializer validation errors: {serializer.errors}")
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        self.perform_update(serializer)
-
-        return Response(serializer.data)
+        try:
+            # Validate serializer
+            if serializer.is_valid():
+                self.perform_update(serializer)
+                return Response(serializer.data)
+            else:
+                print(f"Serializer validation errors: {serializer.errors}")
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"Error updating profile picture: {e}")
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class ThemePreferenceUpdateView(generics.UpdateAPIView):
     """
@@ -164,7 +186,7 @@ class CustomConfirmEmailView(ConfirmEmailView):
     Custom view to handle email confirmation and update the email_verified field
     """
 
-    def get(self, *args, **kwargs):
+    def get(self, **kwargs):
         """
         Handle GET request for email confirmation
         """
