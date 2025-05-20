@@ -277,7 +277,29 @@ The application is deployed on the following platforms:
 - **Platform**: Netlify
 - **URL**: https://motiondetectorappdev.netlify.app
   
+## Written Report
+
 ### System Architecture Diagram
 - Canva Link: https://www.canva.com/design/DAGn_zz_VqI/cLV7Y8IfZRjXSOvEhniQrQ/edit?utm_content=DAGn_zz_VqI&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+
+### Challenges
+- Error Getting Auth Token For Validation / Solution: used email instead of token
+- Error when sending Email Verfication on mail / Solution: added smtp.gmail.com on email host
+- CORS error / Solution: added lunks for the frontend deployment on trusted origins
+- ESP cant send data to Flutter while in development phase / Solution: Make sure to connect to the same network
+- Websocket Disconnection Error / Solution: Make sure that the esp is running
+- Web App Login not working properly due to auth isseus / Solution: Created a new project for web app
+  
+
+
+### Future improvements or features to add
+- Camera Integration: Add camera module to ESP32 for visual verification of motion events
+- Push Notifications: Real-time alerts for motion detection events
+- Offline Mode: Basic functionality when internet connection is unavailable
+- Advanced Analytics Dashboard: Visualize patterns in motion detection data
+- Export Functionality: Download sensor data in CSV/Excel format
+- Customizable Dashboard: User-configurable widgets and layouts
+- API Rate Limiting: Prevent abuse and ensure fair resource allocation
+
   
 For detailed deployment instructions, see the [DEPLOYMENT.md](DEPLOYMENT.md) file.
