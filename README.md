@@ -289,6 +289,7 @@ The application is deployed on the following platforms:
 - ESP cant send data to Flutter while in development phase / Solution: Make sure to connect to the same network
 - Websocket Disconnection Error / Solution: Make sure that the esp is running
 - Web App Login not working properly due to auth isseus / Solution: Created a new project for web app
+- Issue here data is not synching properly when pushing new code or database data / Solution: Push in one device
   
 
 
