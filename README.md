@@ -276,5 +276,8 @@ The application is deployed on the following platforms:
 ### Web App
 - **Platform**: Netlify
 - **URL**: https://motiondetectorappdev.netlify.app
-
+  
+### System Architecture Diagram
+- Canva Link: https://www.canva.com/design/DAGn_zz_VqI/cLV7Y8IfZRjXSOvEhniQrQ/edit?utm_content=DAGn_zz_VqI&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+  
 For detailed deployment instructions, see the [DEPLOYMENT.md](DEPLOYMENT.md) file.
