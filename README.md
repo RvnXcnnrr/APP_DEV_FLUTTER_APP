@@ -49,7 +49,7 @@
 - `lib/providers/`: State management using Provider package
 - `lib/services/`: API, authentication, and WebSocket services
 
-### React Web App
+### React Web App:
 - `web_app/motion-detector-react/`: React project root
 - `src/components/`: Reusable UI components
 - `src/pages/`: Page components including authentication and dashboard
@@ -57,7 +57,7 @@
 - `src/utils/`: Utility functions and configuration
 - `src/services/`: API and WebSocket service integration
 
-### Django Backend
+### Django Backend:
 - `backend/motion_detector_backend/`: Django project root
 - `backend/motion_detector_backend/users/`: User authentication and profile management
 - `backend/motion_detector_backend/sensors/`: Sensor data and motion event handling
