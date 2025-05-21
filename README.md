@@ -13,14 +13,14 @@
 - **Dashboard**: Real-time display of motion detection events with temperature and humidity data
 - **Settings**: App configuration options
 
-### React Web App
+### React Web App:
 - **Responsive Design**: Works on desktop and mobile browsers
 - **Authentication**: Login, registration, and password recovery with email verification
 - **User Profile**: Profile management with theme preference
 - **Dashboard**: Real-time display of motion detection events
 - **Dark/Light Mode**: Theme switching in the top navigation bar
 
-### Django Backend
+### Django Backend:
 - **User Authentication**: Registration with email verification, login/logout, password reset
 - **User Profile Management**: Profile picture upload, theme preference storage
 - **Sensor Data API**: Endpoints for ESP32 to send motion detection and sensor data
