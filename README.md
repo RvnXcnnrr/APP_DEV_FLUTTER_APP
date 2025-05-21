@@ -153,7 +153,7 @@
 
 5. The app will be available at http://localhost:5173/
 
-### Django Backend
+### Django Backend:
 1. Run the setup script to create a virtual environment and install dependencies:
    ```
    setup_backend.bat
