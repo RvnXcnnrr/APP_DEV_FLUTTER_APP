@@ -226,7 +226,7 @@ The server will be available at http://localhost:8000/
 - `POST /api/sensors/esp32/motion-event/`: Create motion event (for ESP32)
 - `POST /api/sensors/esp32/sensor-data/`: Create sensor data (for ESP32)
 
-### WebSocket
+### WebSocket:
 - `wss://app-dev-flutter-app.onrender.com/ws/sensors/?token=[auth-token]`: WebSocket endpoint for production
 - `ws://localhost:8000/ws/sensors/?token=[auth-token]`: WebSocket endpoint for local development
 
@@ -252,7 +252,7 @@ Message types:
 - `/swagger/`: Swagger UI for API documentation
 - `/redoc/`: ReDoc UI for API documentation
 
-## Development Notes
+## Development Notes:
 
 - The app uses the Provider package for state management in Flutter
 - Motion event displays show temperature and humidity data without room numbers
