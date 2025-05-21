@@ -64,13 +64,13 @@
 - `backend/templates/`: Email templates for account verification and password reset
 - `backend/media/`: Uploaded files (profile pictures)
 
-### ESP32 Code
+### ESP32 Code:
 - `esp32_motion_detector.ino`: Arduino code for ESP32 with PIR and DHT22 sensors
 - `ESP32_Production_Template.ino`: Production-ready template for deployment
 
 ## Dependencies
 
-### Flutter App
+### Flutter App:
 - `flutter`: The Flutter SDK
 - `provider` (^6.0.5): State management solution
 - `image_picker` (^1.0.4): For selecting images from gallery or camera
@@ -80,7 +80,7 @@
 - `flutter_secure_storage` (^8.0.0): Secure storage for tokens
 - `web_socket_channel` (^2.4.0): WebSocket communication
 
-### React Web App
+### React Web App:
 - `react` (^18.2.0): UI library
 - `vite` (^5.0.0): Build tool and development server
 - `react-router-dom` (^6.20.0): Routing library
