@@ -6,7 +6,34 @@
 
 ### Flutter App:
 
+- **Splash Screen**: Initial loading screen with app logo and progress indicator
+- **Authentication**: Login, registration, password recovery with email verification
+- **User Profile**: Profile management with photo upload capability
+- **Theme Switching**: Toggle between light and dark modes
+- **Dashboard**: Real-time display of motion detection events with temperature and humidity data
+- **Settings**: App configuration options
 
+### React Web App:
+- **Responsive Design**: Works on desktop and mobile browsers
+- **Authentication**: Login, registration, and password recovery with email verification
+- **User Profile**: Profile management with theme preference
+- **Dashboard**: Real-time display of motion detection events
+- **Dark/Light Mode**: Theme switching in the top navigation bar
+
+### Django Backend:
+- **User Authentication**: Registration with email verification, login/logout, password reset
+- **User Profile Management**: Profile picture upload, theme preference storage
+- **Sensor Data API**: Endpoints for ESP32 to send motion detection and sensor data
+- **WebSocket Support**: Real-time data transmission
+- **API Documentation**: Swagger and ReDoc interfaces
+- **PostgreSQL Database**: Production-ready database configuration
+
+### ESP32 Integration:
+- **Motion Detection**: PIR sensor integration for detecting movement
+- **Temperature & Humidity**: DHT22 sensor integration
+- **Real-time Data**: Sends data to Django backend via HTTP requests
+- **WebSocket Support**: Connects to backend for real-time data transmission
+- **NTP Time Synchronization**: Accurate timestamps for sensor readings
 
 ## Project Structure
 
