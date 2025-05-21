@@ -87,7 +87,7 @@
 - `react-icons` (^4.12.0): Icon library
 - `axios` (^1.6.2): HTTP client for API requests
 
-### Django Backend
+### Django Backend:
 - `Django` (5.0.6): Web framework
 - `djangorestframework` (3.14.0): REST API framework
 - `django-cors-headers` (4.3.1): CORS support
@@ -104,7 +104,7 @@
 - `whitenoise` (6.6.0): Static file serving
 - `dj-database-url` (2.1.0): Database URL configuration
 
-### ESP32
+### ESP32:
 - `WiFi`: WiFi connectivity
 - `HTTPClient`: HTTP requests
 - `WebSocketsClient`: WebSocket communication
