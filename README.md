@@ -4,7 +4,7 @@
 
 ## Features
 
-### Flutter App
+### Flutter App:
 
 - **Splash Screen**: Initial loading screen with app logo and progress indicator
 - **Authentication**: Login, registration, password recovery with email verification
