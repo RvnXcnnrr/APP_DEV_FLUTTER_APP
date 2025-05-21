@@ -5,6 +5,7 @@ A complete motion detection system with Flutter mobile application, React web ap
 ## Features
 ### Flutter App
 
+
 - **Splash Screen**: Initial loading screen with app logo and progress indicator
 - **Authentication**: Login, registration, password recovery with email verification
 - **User Profile**: Profile management with photo upload capability
