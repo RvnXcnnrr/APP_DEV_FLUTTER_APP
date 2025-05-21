@@ -1,6 +1,6 @@
 # Motion Detector App
 
-A complete motion detection system with Flutter mobile application, React web application, Django REST Framework backend, and ESP32 code for motion detection and temperature/humidity monitoring.
+- A complete motion detection system with Flutter mobile application, React web application, Django REST Framework backend, and ESP32 code for motion detection and temperature/humidity monitoring.
 
 ## Features
 
