@@ -28,7 +28,7 @@
 - **API Documentation**: Swagger and ReDoc interfaces
 - **PostgreSQL Database**: Production-ready database configuration
 
-### ESP32 Integration
+### ESP32 Integration:
 - **Motion Detection**: PIR sensor integration for detecting movement
 - **Temperature & Humidity**: DHT22 sensor integration
 - **Real-time Data**: Sends data to Django backend via HTTP requests
@@ -37,7 +37,7 @@
 
 ## Project Structure
 
-### Flutter App
+### Flutter App:
 - `lib/main.dart`: Entry point of the application with route configuration
 - `lib/pages/splash_screen.dart`: Initial loading screen that redirects to login
 - `lib/pages/auth/`: Authentication-related screens (login, register, forgot password)
