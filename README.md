@@ -269,12 +269,12 @@ Message types:
 
 The application is deployed on the following platforms:
 
-### Backend
+### Backend:
 - **Platform**: Render.com
 - **URL**: https://app-dev-flutter-app.onrender.com
 - **Database**: PostgreSQL on Render
 
-### Web App
+### Web App:
 - **Platform**: Netlify
 - **URL**: https://motiondetectorappdev.netlify.app
   
