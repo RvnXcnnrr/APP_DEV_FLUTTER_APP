@@ -202,13 +202,13 @@ The server will be available at http://localhost:8000/
 - `POST /api/auth/registration/verify-email/`: Verify email
 - `POST /api/users/resend-verification-email/`: Resend verification email
 
-### User Profile
+### User Profile:
 - `GET /api/users/profile/`: Get user profile
 - `PUT /api/users/profile/`: Update user profile
 - `PATCH /api/users/profile/picture/`: Update profile picture
 - `PATCH /api/users/profile/theme/`: Update theme preference
 
-### Sensors
+### Sensors:
 - `GET /api/sensors/devices/`: List user's devices
 - `POST /api/sensors/devices/`: Register a new device
 - `GET /api/sensors/devices/{id}/`: Get device details
