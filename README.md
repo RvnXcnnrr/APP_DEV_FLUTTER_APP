@@ -173,7 +173,7 @@
 
 The server will be available at http://localhost:8000/
 
-### ESP32 Setup
+### ESP32 Setup:
 1. Open `esp32_motion_detector.ino` in Arduino IDE
 2. Update the WiFi credentials to match your network
 3. Update the server URL to point to your Django backend:
@@ -193,7 +193,7 @@ The server will be available at http://localhost:8000/
 
 ## API Endpoints
 
-### Authentication
+### Authentication:
 - `POST /api/auth/login/`: User login
 - `POST /api/auth/logout/`: User logout
 - `POST /api/auth/password/reset/`: Request password reset
