@@ -114,7 +114,7 @@
 
 ## Installation
 
-### Flutter App
+### Flutter App:
 1. Make sure you have Flutter installed. If not, follow the [official installation guide](https://docs.flutter.dev/get-started/install).
 
 2. Clone the repository and navigate to the project directory:
@@ -133,7 +133,7 @@
    flutter run
    ```
 
-### React Web App
+### React Web App:
 1. Make sure you have Node.js installed (v14 or later).
 
 2. Navigate to the React app directory:
