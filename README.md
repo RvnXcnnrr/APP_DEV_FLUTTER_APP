@@ -291,8 +291,6 @@ The application is deployed on the following platforms:
 - Web App Login not working properly due to auth isseus / Solution: Created a new project for web app
 - Issue here data is not synching properly when pushing new code or database data / Solution: Push in one device
   
-
-
 ### Future improvements or features to add
 - Camera Integration: Add camera module to ESP32 for visual verification of motion events
 - Push Notifications: Real-time alerts for motion detection events
