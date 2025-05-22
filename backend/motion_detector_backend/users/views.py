@@ -186,7 +186,7 @@ class CustomConfirmEmailView(ConfirmEmailView):
     Custom view to handle email confirmation and update the email_verified field
     """
 
-    def get(self, **kwargs):
+    def get(self, request, *args, **kwargs):
         """
         Handle GET request for email confirmation
         """
